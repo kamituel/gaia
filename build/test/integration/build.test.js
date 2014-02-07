@@ -18,7 +18,7 @@ suite('Build Integration tests', function() {
   });
 
   test('make without rule & variable', function(done) {
-    exec('ROCKETBAR=none make', function(error, stdout, stderr) {
+    exec('ROCKETBAR=0 make', function(error, stdout, stderr) {
       helper.checkError(error, stdout, stderr);
 
       // expected values for prefs and user_prefs
@@ -331,59 +331,6 @@ suite('Build Integration tests', function() {
       helper.checkFileInZip(zipPath, pathInZip, expectedBrandingPath);
       done();
     });
-  });
-
-  test('make with ROCKETBAR=full', function(done) {
-    exec('ROCKETBAR=full make',
-      function(error, stdout, stderr) {
-        helper.checkError(error, stdout, stderr);
-
-        var hsBroZip = new AdmZip(path.join(process.cwd(), 'profile',
-          'webapps', 'browser.gaiamobile.org', 'application.zip'));
-        var hsSysZip = new AdmZip(path.join(process.cwd(), 'profile',
-          'webapps', 'system.gaiamobile.org', 'application.zip'));
-
-        var hsInit =
-          JSON.parse(hsBroZip.readAsText(hsBroZip.getEntry('js/init.json')));
-        var hsBroManifest =
-          JSON.parse(hsBroZip.readAsText(hsBroZip.getEntry('manifest.webapp')));
-        var defaultJSONPath =
-          path.join(process.cwd(), 'apps', 'browser', 'build', 'default.json');
-        var hsIcc =
-          JSON.parse(hsSysZip.readAsText(hsSysZip.getEntry('js/icc.json')));
-        var hsWapuaprof =
-          JSON.parse(hsSysZip.readAsText(hsSysZip.getEntry('js/wapuaprof.json')));
-        var hsSysManifest =
-          JSON.parse(hsSysZip.readAsText(hsSysZip.getEntry('manifest.webapp')));
-
-        var expectedInitJson = JSON.parse(fs.readFileSync(defaultJSONPath));
-        var expectedIcc = {
-          'defaultURL': 'http://www.mozilla.org/en-US/firefoxos/'
-        };
-        var expectedWap = {};
-        var expectedManifest = {
-          activities: {
-            view: {
-              filters: {
-                type: 'url',
-                url: {
-                  required: true,
-                  pattern: 'https?:.{1,16384}',
-                  patternFlags: 'i'
-                }
-              }
-            }
-          }
-        };
-        helper.checkSettings(hsInit, expectedInitJson);
-        assert.equal(hsBroManifest.role, 'system');
-        assert.equal(hsBroManifest.activities, null);
-        helper.checkSettings(hsIcc, expectedIcc);
-        helper.checkSettings(hsWapuaprof, expectedWap);
-        helper.checkSettings(hsSysManifest, expectedManifest);
-        done();
-      }
-    );
   });
 
   teardown(function() {
