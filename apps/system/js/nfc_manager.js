@@ -225,6 +225,7 @@ var NfcManager = {
     }
     if (action == null) {
       this._debug('XX Found no ndefmessage actions. XX');
+      action = this.formatNDEFUnknown(ndefmessage);
     } else {
       action.data.records = ndefmessage;
     }
@@ -280,6 +281,15 @@ var NfcManager = {
         action.data.sessionToken = session;
         var a = new MozActivity(action);
       }
+  },
+
+  handleNdefDiscoveredEmpty:
+    function nm_handleNdefDiscoveredEmpty(tech, session) {
+      var empty    = new Uint8Array(0);
+      var emptyRec = [new MozNDEFRecord(NDEF.tnf_empty,
+                                        NDEF.rtd_text,
+                                        empty, empty)];
+      this.handleNdefDiscovered(techList[0], command.sessionToken, emptyRec);
   },
 
   // NDEF only currently
@@ -386,9 +396,10 @@ var NfcManager = {
     var priority = {
       'P2P': 0,
       'NDEF': 1,
-      'NDEF_FORMATTABLE': 2,
-      'NFC_A': 3,
-      'MIFARE_ULTRALIGHT': 4
+      'NDEF_WRITEABLE': 2,
+      'NDEF_FORMATTABLE': 3,
+      'NFC_A': 4,
+      'MIFARE_ULTRALIGHT': 5
     };
     techList.sort(function sorter(techA, techB) {
       return priority[techA] - priority[techB];
@@ -401,6 +412,9 @@ var NfcManager = {
         break;
       case 'NDEF':
         this.handleNdefDiscovered(techList[0], command.sessionToken, records);
+        break;
+      case 'NDEF_WRITEABLE':
+        this.handleNdefDiscoveredEmpty(techList[0], command.sessionToken);
         break;
       case 'NDEF_FORMATTABLE':
         this.handleNdefDiscoveredUseConnect(techList[0], command.sessionToken);
@@ -437,6 +451,15 @@ var NfcManager = {
       name: 'nfc-ndef-discovered',
       data: {
         type: 'empty'
+      }
+    };
+  },
+
+  formatNDEFUnknown: function nm_formatUnknown(record) {
+    return {
+      name: 'nfc-ndef-discovered',
+      data: {
+        type: NfcUtil.toUTF8(record.type)
       }
     };
   },
