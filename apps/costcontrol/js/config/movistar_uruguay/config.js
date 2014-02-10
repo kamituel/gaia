@@ -10,7 +10,7 @@ var MovistarUruguayConfig = {
     destination: '222',
     text: 'SALDO',
     senders: ['222'],
-    regexp: 'Recarga \\$([0-9,]+)(?:\\.([0-9]+))?',
+    regexp: 'Recarga \\$([0-9,]{1,3})\\.?([0-9]{1,2})?',
     zero_regexp: '(Su saldo actual es cero)',
     minimum_delay: 3 * 60 * 60 * 1000 // 3h
   },
