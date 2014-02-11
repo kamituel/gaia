@@ -226,6 +226,10 @@ function handleNdefDiscovered(activityData) {
   var nfcdom = window.navigator.mozNfc;
   var nfcTag = nfcdom.getNFCTag(activityData.sessionToken);
   nfcUI.nfcTag = nfcTag;
+  if (!nfcTag) {
+    debug("Error: handleNdefDiscovered: can't get NFC Tag session for operations.");
+    return false;
+  }
 
   switch (activityData.tech) {
     case 'P2P':

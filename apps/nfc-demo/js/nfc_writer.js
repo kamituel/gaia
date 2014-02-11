@@ -18,16 +18,24 @@ var nfcWriter = {
  * and onerror.
  */
 writeRecordArrayTag: function(ndefRecords) {
-  debug("writeRecordArrayTag: " + ndefRecords);
+  debug('writeRecordArrayTag: ' + ndefRecords);
   if (ndefRecords == null) {
-    debug("Error: Nothing passed in.");
+    debug('Error: Nothing passed in.');
     return null;
   }
   if (!nfcUI.p2p) {
-    var nfcTag = nfcUI.nfcTag;
-    if (nfcTag) {
-      var domreq = nfcTag.writeNDEF(ndefRecords);
+    if (!nfcUI.nfcTag && nfcUI.getActivityData()) {
+      debug('Get NFCTag');
+      var data = nfcUI.getActivityData();
+      nfcUI.nfcTag = window.navigator.mozNfc.getNFCTag(data.sessionToken)
+    }
+
+    if (nfcUI.nfcTag) {
+      debug('nfcUI: ' + nfcUI.nfcTag);
+      var domreq = nfcUI.nfcTag.writeNDEF(ndefRecords);
       return domreq;
+    } else {
+      debug('Failed to get connection');
     }
   } else {
     var data = nfcUI.getActivityData();
@@ -38,7 +46,7 @@ writeRecordArrayTag: function(ndefRecords) {
       return domreq;
     }
   }
-  debug("Error: did not write, no connection.");
+  debug('Error: did not write, no connection.');
   return null;
 },
 
@@ -56,7 +64,6 @@ textFormToNdefRecord: function(elementRef) {
 
 // URL:
 urlFormToNdefRecord: function(elementRef, abbreviate) {
-  debug("Trying to get URI...");
   var uri = $(elementRef).find('.uri').val();
   //var uri = $(elementRef + ' > .uri').val();
   debug("URI is: " + uri);
@@ -67,9 +74,9 @@ urlFormToNdefRecord: function(elementRef, abbreviate) {
 
 // SmartPoster URI:
 smartPosterUriFormToNdefRecord: function(elementRef) {
-  var title = $(elementRef + ' > .title').val();
-  var uri = $(elementRef + ' > .uri').val();
-  var titlelang = $(elementRef + ' > .titleLang').val();
+  var title = $(elementRef).find('.title').val();
+  var uri = $(elementRef).find('.uri').val();
+  var titlelang = $(elementRef).find('.titleLang').val();
   var aTitle = {'title': title, 'lang': titlelang};
   record = nfcSmartPoster.createUriNdefRecord(
     uri, aTitle, nfcSmartPoster.doAction);
@@ -78,9 +85,9 @@ smartPosterUriFormToNdefRecord: function(elementRef) {
 
 // Email:
 emailFormToNdefRecord: function(elementRef) {
-  var mailto = $(elementRef + ' > .emailMailTo').val();
-  var subject = $(elementRef + ' > .emailSubject').val();
-  var body = $(elementRef + ' > .emailBody').val();
+  var mailto = $(elementRef).find('.emailMailTo').val();
+  var subject = $(elementRef).find('.emailSubject').val();
+  var body = $(elementRef).find('.emailBody').val();
   record = nfcUri.createEmailNdefRecord(
     {'mailto' : mailto, 'subject' : subject, 'body' : body});
   return record;
@@ -88,11 +95,11 @@ emailFormToNdefRecord: function(elementRef) {
 
 // SmartPoster Email:
 smartPosterEmailFormToNdefRecord: function(elementRef) {
-  var title = $(elementRef + ' > .title').val();
-  var titlelang = $(elementRef + ' > .titleLang').val();
-  var mailto = $(elementRef + ' > .emailMailTo').val();
-  var subject = $(elementRef + ' > .emailSubject').val();
-  var body = $(elementRef + ' > .emailBody').val();
+  var title = $(elementRef).find('.title').val();
+  var titlelang = $(elementRef).find('.titleLang').val();
+  var mailto = $(elementRef).find('.emailMailTo').val();
+  var subject = $(elementRef).find('.emailSubject').val();
+  var body = $(elementRef).find('.emailBody').val();
   var aTitle = {'title': title, 'lang': titlelang};
   record = nfcSmartPoster.createEmailNdefRecord(
     {'mailto' : mailto, 'subject' : subject, 'body' : body},
@@ -102,8 +109,8 @@ smartPosterEmailFormToNdefRecord: function(elementRef) {
 
 // SMS:
 smsFormToNdefRecord: function(elementRef) {
-  var phoneNumber = $(elementRef + ' > .smsPhoneNumber').val();
-  var message = $(elementRef + ' > .smsMessage').val();
+  var phoneNumber = $(elementRef).find('.smsPhoneNumber').val();
+  var message = $(elementRef).find('.smsMessage').val();
   record = nfcSms.createSmsNdefRecord(
     {'phoneNumber' : phoneNumber, 'message' : message});
   return record;
@@ -115,8 +122,8 @@ smsFormToNdefRecord: function(elementRef) {
 //   http://www.w3.org/TR/2012/WD-contacts-api-20120712/#the-contact-dictionary
 contactFormToNdefRecord: function(elementRef) {
   var tnf = nfc.tnf_mime_media;
-  var type = $(elementRef + ' > .nfc_contact_type').val();
-  var id = $(elementRef + ' > .nfc_contact_id').val();
+  var type = $(elementRef).find('.nfc_contact_type').val();
+  var id = $(elementRef).find('.nfc_contact_id').val();
 
   if (!type) {
     type = '';
@@ -125,24 +132,24 @@ contactFormToNdefRecord: function(elementRef) {
     id = '';
   }
   /* payload */
-  var fname = $(elementRef + ' > .nfc_contact_payload_name_first').val();
-  var lname = $(elementRef + ' > .nfc_contact_payload_name_last').val();
-  var mname1 = $(elementRef + ' > .nfc_contact_payload_name_middle_1').val();
-  var mname2 = $(elementRef + ' > .nfc_contact_payload_name_middle_2').val();
+  var fname = $(elementRef).find('.nfc_contact_payload_name_first').val();
+  var lname = $(elementRef).find('.nfc_contact_payload_name_last').val();
+  var mname1 = $(elementRef).find('.nfc_contact_payload_name_middle_1').val();
+  var mname2 = $(elementRef).find('.nfc_contact_payload_name_middle_2').val();
 
-  var fullname = $(elementRef + ' > .nfc_contact_payload_name_fullname').val();
-  var telephone = $(elementRef + ' > .nfc_contact_payload_telephone').val();
-  var mobile = $(elementRef + ' > .nfc_contact_payload_mobile').val();
-  var email = $(elementRef + ' > .nfc_contact_payload_email').val();
-  var address = $(elementRef + ' > .nfc_contact_payload_address').val();
+  var fullname = $(elementRef).find('.nfc_contact_payload_name_fullname').val();
+  var telephone = $(elementRef).find('.nfc_contact_payload_telephone').val();
+  var mobile = $(elementRef).find('.nfc_contact_payload_mobile').val();
+  var email = $(elementRef).find('.nfc_contact_payload_email').val();
+  var address = $(elementRef).find('.nfc_contact_payload_address').val();
 
 
-  console.log('Form processing Results: ' +
-              'FirstName: ' + fname + ' LastName: ' + lname +
-              ' MiddleName1: ' + mname1 + ' MiddleName2: ' + mname2 +
-              ' FullName: ' + fullname + ' Telephone: ' + telephone +
-              ' Mobile: ' + mobile + ' Email: ' + email +
-              ' Address: ' + address);
+  debug('Form processing Results: ' +
+        'FirstName: ' + fname + ' LastName: ' + lname +
+        ' MiddleName1: ' + mname1 + ' MiddleName2: ' + mname2 +
+        ' FullName: ' + fullname + ' Telephone: ' + telephone +
+        ' Mobile: ' + mobile + ' Email: ' + email +
+        ' Address: ' + address);
 
   // payload:
   var payload = 'BEGIN:VCARD\n';
@@ -237,7 +244,7 @@ postContactFormToNdef: function(elementRef) {
 
 // Empty Tag:
 postEmptyTag: function() {
-  console.log('XXXX Post empty tag XXXX');
+  debug('XXXX Post empty tag XXXX');
   var empty = new Uint8Array(0);
   var records = [new MozNDEFRecord(nfc.tnf_empty, nfc.rtd_text, empty, empty)];
   nfcUI.postPendingMessage(records);
