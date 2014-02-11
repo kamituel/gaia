@@ -284,12 +284,12 @@ var NfcManager = {
   },
 
   handleNdefDiscoveredEmpty:
-    function nm_handleNdefDiscoveredEmpty(tech, session) {
+    function nm_handleNdefDiscoveredEmpty(tech, sessionToken) {
       var empty    = new Uint8Array(0);
       var emptyRec = [new MozNDEFRecord(NDEF.tnf_empty,
                                         NDEF.rtd_text,
                                         empty, empty)];
-      this.handleNdefDiscovered(techList[0], command.sessionToken, emptyRec);
+      this.handleNdefDiscovered(tech, sessionToken, emptyRec);
   },
 
   // NDEF only currently
@@ -411,7 +411,11 @@ var NfcManager = {
         this.handleP2P(techList[0], command.sessionToken, records);
         break;
       case 'NDEF':
-        this.handleNdefDiscovered(techList[0], command.sessionToken, records);
+        if (records) {
+          this.handleNdefDiscovered(techList[0], command.sessionToken, records);
+        } else {
+          this.handleNdefDiscoveredEmpty(techList[0], command.sessionToken);
+        }
         break;
       case 'NDEF_WRITEABLE':
         this.handleNdefDiscoveredEmpty(techList[0], command.sessionToken);
