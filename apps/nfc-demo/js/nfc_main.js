@@ -21,6 +21,7 @@ function handleWellKnownRecord(record) {
     return handleSmartPosterAction(record);
   } else {
     console.log('Unknown record type: ' + record.type);
+    return null;
   }
 }
 
