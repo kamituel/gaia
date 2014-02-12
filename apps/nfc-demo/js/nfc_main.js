@@ -330,15 +330,26 @@ function handleNdefDiscoveredMessages(ndefmessage) {
 
   var html = '<li data-role="list-divider" role="heading">NDEF Tag</li>';
 
+  var tnf;
+  var type;
+  var id;
+  var payload;
   for (var i = 0; i < ndefmessage.length; i++) {
     var record = ndefmessage[i];
     console.log('RECORD: ' + JSON.stringify(record));
     //Dump generic data
+
+    // Bug: Seems MozNDEFRecord isn't passed in sometimes:
+    tnf     = record.tnf;
+    type    = record.type ? convertUint8ArrayToHex(record.type) : record.type;
+    id      = record.id ? convertUint8ArrayToHex(record.id) : record.id;
+    payload = record.payload ? convertUint8ArrayToHex(record.payload) : record.payload;
+
     html += '<li data-theme="c">';
-    html += 'tnf: ' + record.tnf + '<br/>';
-    html += 'type: ' + convertUint8ArrayToHex(record.type) + '<br/>';
-    html += 'id: ' + convertUint8ArrayToHex(record.id) + '<br/>';
-    html += 'raw payload: ' + convertUint8ArrayToHex(record.payload) + '<br/>';
+    html += 'tnf: ' + tnf + '<br/>';
+    html += 'type: ' + type + '<br/>';
+    html += 'id: ' + id + '<br/>';
+    html += 'raw payload: ' + payload + '<br/>';
     html += '</li>';
 
     var action = '';
