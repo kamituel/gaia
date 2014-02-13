@@ -195,7 +195,8 @@ class GaiaData(object):
 
     def insert_contact(self, contact):
         self.marionette.switch_to_frame()
-        result = self.marionette.execute_async_script('return GaiaDataLayer.insertContact(%s);' % json.dumps(contact), special_powers=True)
+        mozcontact = contact.create_mozcontact()
+        result = self.marionette.execute_async_script('return GaiaDataLayer.insertContact(%s);' % json.dumps(mozcontact), special_powers=True)
         assert result, 'Unable to insert contact %s' % contact
 
     def remove_all_contacts(self):
@@ -265,24 +266,6 @@ class GaiaData(object):
     def bluetooth_disable(self):
         self.marionette.switch_to_frame()
         return self.marionette.execute_async_script("return GaiaDataLayer.disableBluetooth()")
-
-    def bluetooth_pair_device(self, device_name):
-        return self.marionette.execute_async_script('return GaiaDataLayer.pairBluetoothDevice("%s")' % device_name)
-
-    def bluetooth_unpair_all_devices(self):
-        self.marionette.switch_to_frame()
-        self.marionette.execute_async_script('return GaiaDataLayer.unpairAllBluetoothDevices()')
-
-    def bluetooth_set_device_name(self, device_name):
-        result = self.marionette.execute_async_script('return GaiaDataLayer.bluetoothSetDeviceName(%s);' % device_name)
-        assert result, "Unable to set device's bluetooth name to %s" % device_name
-
-    def bluetooth_set_device_discoverable_mode(self, discoverable):
-        if (discoverable):
-            result = self.marionette.execute_async_script('return GaiaDataLayer.bluetoothSetDeviceDiscoverableMode(true);')
-        else:
-            result = self.marionette.execute_async_script('return GaiaDataLayer.bluetoothSetDeviceDiscoverableMode(false);')
-        assert result, 'Able to set the device bluetooth discoverable mode'
 
     @property
     def bluetooth_is_enabled(self):
@@ -670,20 +653,29 @@ class Accessibility(object):
             [element], special_powers=True)
 
 
+class FakeUpdateChecker(object):
+
+    def __init__(self, marionette):
+        self.marionette = marionette
+        self.fakeupdatechecker_atom = os.path.abspath(
+            os.path.join(__file__, os.path.pardir, 'atoms', "fake_update-checker.js"))
+
+    def check_updates(self):
+        self.marionette.set_context(self.marionette.CONTEXT_CHROME)
+        self.marionette.import_script(self.fakeupdatechecker_atom)
+        self.marionette.execute_script("GaiaUITests_FakeUpdateChecker();")
+        self.marionette.set_context(self.marionette.CONTEXT_CONTENT)
+
 class GaiaDevice(object):
 
     def __init__(self, marionette, testvars=None):
         self.marionette = marionette
         self.testvars = testvars or {}
+        self.update_checker = FakeUpdateChecker(self.marionette)
         self.lockscreen_atom = os.path.abspath(
             os.path.join(__file__, os.path.pardir, 'atoms', "gaia_lock_screen.js"))
         self.marionette.import_script(self.lockscreen_atom)
-        self.fakeupdatechecker_atom = os.path.abspath(
-            os.path.join(__file__, os.path.pardir, 'atoms', "fake_update-checker.js"))
-        self.marionette.set_context(self.marionette.CONTEXT_CHROME)
-        self.marionette.import_script(self.fakeupdatechecker_atom)
-        self.marionette.execute_script("GaiaUITests_FakeUpdateChecker();")
-        self.marionette.set_context(self.marionette.CONTEXT_CONTENT)
+        self.update_checker.check_updates()
 
     def add_device_manager(self, device_manager):
         self._manager = device_manager
@@ -702,7 +694,7 @@ class GaiaDevice(object):
     @property
     def is_android_build(self):
         if self.testvars.get('is_android_build') is None:
-            self.testvars['is_android_build'] = 'Android' in self.marionette.session_capabilities['platformName']
+            self.testvars['is_android_build'] = 'android' in self.marionette.session_capabilities['platformName'].lower()
         return self.testvars['is_android_build']
 
     @property
@@ -765,21 +757,14 @@ class GaiaDevice(object):
             raise Exception('Unable to start B2G')
         self.marionette.wait_for_port()
         self.marionette.start_session()
-        if self.is_android_build:
-            self.marionette.execute_async_script("""
-window.addEventListener('mozbrowserloadend', function loaded(aEvent) {
-  if (aEvent.target.src.indexOf('ftu') != -1 || aEvent.target.src.indexOf('homescreen') != -1) {
-    window.removeEventListener('mozbrowserloadend', loaded);
-    marionetteScriptFinished();
-  }
-});""", script_timeout=timeout)
-            # TODO: Remove this sleep when Bug 924912 is addressed
-            time.sleep(5)
+
+        # Wait for the AppWindowManager to have registered the frame as active (loaded)
+        locator = (By.CSS_SELECTOR, 'div.appWindow.active')
+        Wait(marionette=self.marionette, timeout=timeout, ignored_exceptions=NoSuchElementException)\
+            .until(lambda m: m.find_element(*locator).is_displayed())
+
         self.marionette.import_script(self.lockscreen_atom)
-        self.marionette.set_context(self.marionette.CONTEXT_CHROME)
-        self.marionette.import_script(self.fakeupdatechecker_atom)
-        self.marionette.execute_script("GaiaUITests_FakeUpdateChecker();")
-        self.marionette.set_context(self.marionette.CONTEXT_CONTENT)
+        self.update_checker.check_updates()
 
     def stop_b2g(self):
         if self.marionette.instance:
@@ -792,6 +777,14 @@ window.addEventListener('mozbrowserloadend', function loaded(aEvent) {
         self.marionette.client.close()
         self.marionette.session = None
         self.marionette.window = None
+
+    def press_sleep_button(self):
+        self.marionette.execute_script("""
+            window.wrappedJSObject.dispatchEvent(new CustomEvent('mozChromeEvent', {
+              detail: {
+                type: 'sleep-button-press'
+              }
+            }));""")
 
     def turn_screen_off(self):
         self.marionette.execute_script("window.wrappedJSObject.ScreenManager.turnScreenOff(true)")

@@ -80,7 +80,12 @@ DESKTOP_SHIMS?=0
 GAIA_OPTIMIZE?=0
 GAIA_DEV_PIXELS_PER_PX?=1
 DOGFOOD?=0
-ROCKETBAR?=1
+
+# Rocketbar customization
+# none - Do not enable rocketbar
+# half - Rocketbar is enabled, and so is browser app
+# full - Rocketbar is enabled, no browser app
+ROCKETBAR?=half
 TEST_AGENT_PORT?=8789
 GAIA_APP_TARGET?=engineering
 
@@ -133,13 +138,8 @@ endif
 HOMESCREEN?=$(SCHEME)system.$(GAIA_DOMAIN)
 
 BUILD_APP_NAME?=*
-TEST_INTEGRATION_APP_NAME?=*
 ifneq ($(APP),)
-	ifeq ($(MAKECMDGOALS), test-integration)
-	TEST_INTEGRATION_APP_NAME=$(APP)
-	else
 	BUILD_APP_NAME=$(APP)
-	endif
 endif
 
 REPORTER?=spec
@@ -385,7 +385,7 @@ define BUILD_CONFIG
 	"GAIA_APPDIRS" : "$(GAIA_APPDIRS)", \
 	"NOFTU" : "$(NOFTU)", \
 	"REMOTE_DEBUGGER" : "$(REMOTE_DEBUGGER)", \
-	"ROCKETBAR" : $(ROCKETBAR), \
+	"ROCKETBAR" : "$(ROCKETBAR)", \
 	"TARGET_BUILD_VARIANT" : "$(TARGET_BUILD_VARIANT)", \
 	"SETTINGS_PATH" : "$(SETTINGS_PATH)", \
 	"VARIANT_PATH" : "$(VARIANT_PATH)" \
@@ -707,8 +707,8 @@ b2g: node_modules/.bin/mozilla-download
 
 .PHONY: test-integration
 # $(PROFILE_FOLDER) should be `profile-test` when we do `make test-integration`.
-test-integration: b2g $(PROFILE_FOLDER)
-	NPM_REGISTRY=$(NPM_REGISTRY) ./bin/gaia-marionette $(shell find . -path "*$(TEST_INTEGRATION_APP_NAME)/test/marionette/*_test.js") \
+test-integration: $(PROFILE_FOLDER)
+	NPM_REGISTRY=$(NPM_REGISTRY) ./bin/gaia-marionette \
 		--host $(MARIONETTE_RUNNER_HOST) \
 		--manifest $(TEST_MANIFEST) \
 		--reporter $(REPORTER)
@@ -759,7 +759,7 @@ ifeq ($(BUILD_APP_NAME),*)
 	do \
 		parent="`dirname $$d`"; \
 		pathlen=`expr $${#parent} + 2`; \
-		find "$$d" -name '*_test.js' | awk '{print substr($$0,'$${pathlen}')}' >> /tmp/test-agent-config; \
+		find "$$d" -name '*_test.js' -path '*/test/unit/*' | awk '{print substr($$0,'$${pathlen}')}' >> /tmp/test-agent-config; \
 	done;
 	@echo '{"tests": [' >> $(TEST_AGENT_CONFIG)
 	@cat /tmp/test-agent-config |  \
@@ -1019,3 +1019,7 @@ build-test-integration: $(NPM_INSTALLED_PROGRAMS)
 .PHONY: docs
 docs: $(NPM_INSTALLED_PROGRAMS)
 	grunt docs
+
+.PHONY: watch
+watch: $(NPM_INSTALLED_PROGRAMS)
+	node build/watcher.js
