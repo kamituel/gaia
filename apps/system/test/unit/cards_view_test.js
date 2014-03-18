@@ -14,6 +14,7 @@ requireApp('system/test/unit/mock_orientation_manager.js');
 requireApp('system/test/unit/mock_rocketbar.js');
 requireApp('system/test/unit/mock_sleep_menu.js');
 requireApp('system/test/unit/mock_popup_manager.js');
+requireApp('system/test/unit/mock_stack_manager.js');
 
 var mocksForCardsView = new MocksHelper([
   'GestureDetector',
@@ -24,18 +25,140 @@ var mocksForCardsView = new MocksHelper([
   'Rocketbar',
   'SleepMenu',
   'OrientationManager',
-  'PopupManager'
+  'PopupManager',
+  'StackManager'
 ]).init();
+
+var apps =
+{
+  'http://sms.gaiamobile.org': {
+    launchTime: 5,
+    name: 'SMS',
+    frame: document.createElement('div'),
+    iframe: document.createElement('iframe'),
+    manifest: {
+      orientation: 'portrait-primary'
+    },
+    rotatingDegree: 0,
+    requestScreenshotURL: function() {
+      return null;
+    },
+    getScreenshot: function(callback) {
+      callback();
+    },
+    origin: 'http://sms.gaiamobile.org',
+    blur: function() {}
+  },
+  'http://game.gaiamobile.org': {
+    launchTime: 4,
+    name: 'GAME',
+    frame: document.createElement('div'),
+    iframe: document.createElement('iframe'),
+    manifest: {
+      orientation: 'landscape-primary'
+    },
+    rotatingDegree: 90,
+    requestScreenshotURL: function() {
+      return null;
+    },
+    getScreenshot: function(callback) {
+      callback();
+    },
+    origin: 'http://game.gaiamobile.org',
+    blur: function() {}
+  },
+  'http://game2.gaiamobile.org': {
+    launchTime: 3,
+    name: 'GAME2',
+    frame: document.createElement('div'),
+    iframe: document.createElement('iframe'),
+    manifest: {
+      orientation: 'landscape-secondary'
+    },
+    rotatingDegree: 270,
+    requestScreenshotURL: function() {
+      return null;
+    },
+    getScreenshot: function(callback) {
+      callback();
+    },
+    origin: 'http://game2.gaiamobile.org',
+    blur: function() {}
+  },
+  'http://game3.gaiamobile.org': {
+    launchTime: 2,
+    name: 'GAME3',
+    frame: document.createElement('div'),
+    iframe: document.createElement('iframe'),
+    manifest: {
+      orientation: 'landscape'
+    },
+    rotatingDegree: 90,
+    requestScreenshotURL: function() {
+      return null;
+    },
+    getScreenshot: function(callback) {
+      callback();
+    },
+    origin: 'http://game3.gaiamobile.org',
+    blur: function() {}
+  },
+  'http://game4.gaiamobile.org': {
+    launchTime: 1,
+    name: 'GAME4',
+    frame: document.createElement('div'),
+    iframe: document.createElement('iframe'),
+    manifest: {
+      orientation: 'portrait-secondary'
+    },
+    rotatingDegree: 180,
+    requestScreenshotURL: function() {
+      return null;
+    },
+    getScreenshot: function(callback) {
+      callback();
+    },
+    origin: 'http://game4.gaiamobile.org',
+    blur: function() {}
+  }
+};
 
 suite('cards view >', function() {
   var subject;
+  var fakeInnerHeight = 200;
 
   var screenNode, realMozLockOrientation, realScreenLayout;
+<<<<<<< HEAD
   var cardsView;
   var originalLockScreen;
 
   mocksForCardsView.attachTestHelpers();
   suiteSetup(function(done) {
+=======
+  var cardsView, cardsList;
+  var originalLockScreen;
+  var ihDescriptor;
+
+  function createTouchEvent(type, target, x, y) {
+    var touch = document.createTouch(window, target, 1, x, y, x, y);
+    var touchList = document.createTouchList(touch);
+
+    var evt = document.createEvent('TouchEvent');
+    evt.initTouchEvent(type, true, true, window,
+                       0, false, false, false, false,
+                       touchList, touchList, touchList);
+    return evt;
+  }
+
+  mocksForCardsView.attachTestHelpers();
+  suiteSetup(function(done) {
+    ihDescriptor = Object.getOwnPropertyDescriptor(window, 'innerHeight');
+    Object.defineProperty(window, 'innerHeight', {
+      value: fakeInnerHeight,
+      configurable: true
+    });
+
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
     originalLockScreen = window.lockScreen;
     window.lockScreen = MockLockScreen;
     screenNode = document.createElement('div');
@@ -43,7 +166,9 @@ suite('cards view >', function() {
     cardsView = document.createElement('div');
     cardsView.id = 'cards-view';
 
-    cardsView.innerHTML = '<ul></ul>';
+    cardsList = document.createElement('ul');
+    cardsList.id = 'cards-list';
+    cardsView.appendChild(cardsList);
 
     screenNode.appendChild(cardsView);
     document.body.appendChild(screenNode);
@@ -55,6 +180,10 @@ suite('cards view >', function() {
   });
 
   suiteTeardown(function() {
+<<<<<<< HEAD
+=======
+    Object.defineProperty(window, 'innerHeight', ihDescriptor);
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
     window.lockScreen = originalLockScreen;
     screenNode.parentNode.removeChild(screenNode);
     window.ScreenLayout = realScreenLayout;
@@ -67,88 +196,13 @@ suite('cards view >', function() {
     });
 
     setup(function() {
-      MockAppWindowManager.mRunningApps = {
-        'http://sms.gaiamobile.org': {
-          launchTime: 5,
-          name: 'SMS',
-          frame: document.createElement('div'),
-          iframe: document.createElement('iframe'),
-          manifest: {
-            orientation: 'portrait-primary'
-          },
-          rotatingDegree: 0,
-          requestScreenshotURL: function() {
-            return null;
-          },
-          getScreenshot: function(callback) {
-            callback();
-          }
-        },
-        'http://game.gaiamobile.org': {
-          launchTime: 4,
-          name: 'GAME',
-          frame: document.createElement('div'),
-          iframe: document.createElement('iframe'),
-          manifest: {
-            orientation: 'landscape-primary'
-          },
-          rotatingDegree: 90,
-          requestScreenshotURL: function() {
-            return null;
-          },
-          getScreenshot: function(callback) {
-            callback();
-          }
-        },
-        'http://game2.gaiamobile.org': {
-          launchTime: 3,
-          name: 'GAME2',
-          frame: document.createElement('div'),
-          iframe: document.createElement('iframe'),
-          manifest: {
-            orientation: 'landscape-secondary'
-          },
-          rotatingDegree: 270,
-          requestScreenshotURL: function() {
-            return null;
-          },
-          getScreenshot: function(callback) {
-            callback();
-          }
-        },
-        'http://game3.gaiamobile.org': {
-          launchTime: 2,
-          name: 'GAME3',
-          frame: document.createElement('div'),
-          iframe: document.createElement('iframe'),
-          manifest: {
-            orientation: 'landscape'
-          },
-          rotatingDegree: 90,
-          requestScreenshotURL: function() {
-            return null;
-          },
-          getScreenshot: function(callback) {
-            callback();
-          }
-        },
-        'http://game4.gaiamobile.org': {
-          launchTime: 1,
-          name: 'GAME4',
-          frame: document.createElement('div'),
-          iframe: document.createElement('iframe'),
-          manifest: {
-            orientation: 'portrait-secondary'
-          },
-          rotatingDegree: 180,
-          requestScreenshotURL: function() {
-            return null;
-          },
-          getScreenshot: function(callback) {
-            callback();
-          }
-        }
-      };
+      MockStackManager.mStack = [];
+      for (var app in apps) {
+        MockStackManager.mStack.push(apps[app]);
+      }
+      MockStackManager.mCurrent = 0;
+
+      MockAppWindowManager.mRunningApps = apps;
       MockAppWindowManager.mDisplayedApp = 'http://sms.gaiamobile.org';
     });
 
@@ -179,6 +233,25 @@ suite('cards view >', function() {
     });
 
     suite('display cardsview >', function() {
+      setup(function(done) {
+        CardsView.showCardSwitcher(false);
+        setTimeout(done);
+      });
+
+      test('cardsview should be active', function() {
+        assert.isTrue(cardsView.classList.contains('active'));
+      });
+
+      test('cardsview should have no recent apps', function() {
+        assert.isFalse(cardsView.classList.contains('empty'));
+      });
+
+      teardown(function() {
+        CardsView.hideCardSwitcher(true);
+      });
+    });
+
+    suite('display cardsview (in rocketbar) >', function() {
       var rocketbarRender;
 
       setup(function(done) {
@@ -188,7 +261,7 @@ suite('cards view >', function() {
       });
 
       teardown(function() {
-        CardsView.hideCardSwitcher();
+        CardsView.hideCardSwitcher(true);
         rocketbarRender.restore();
       });
 
@@ -207,6 +280,10 @@ suite('cards view >', function() {
         });
       });
 
+      teardown(function() {
+        CardsView.hideCardSwitcher(true);
+      });
+
       test('cardsview should not be active', function() {
         assert.isFalse(cardsView.classList.contains('active'));
       });
@@ -218,11 +295,20 @@ suite('cards view >', function() {
       });
 
       teardown(function() {
-        CardsView.hideCardSwitcher();
+        CardsView.hideCardSwitcher(true);
       });
 
       var testCardOrientation = function(origin, orientation) {
-        var card = cardsView.querySelector('li[data-origin="' + origin + '"]');
+        var app = StackManager.mStack.find(function(app) {
+          if (app.origin == origin) {
+            return true;
+          }
+          return false;
+        });
+
+        var ordinal = StackManager.mStack.indexOf(app);
+        var card =
+          cardsView.querySelector('li[data-position="' + ordinal + '"]');
         card.dispatchEvent(new CustomEvent('onviewport'));
         return card.querySelector('.screenshotView')
             .classList.contains(orientation);
@@ -258,6 +344,10 @@ suite('cards view >', function() {
         setTimeout(done);
       });
 
+      teardown(function() {
+        CardsView.hideCardSwitcher(true);
+      });
+
       test('has correct classes', function() {
         var screen = document.getElementById('screen');
         assert.isTrue(cardsView.classList.contains('active'));
@@ -275,8 +365,14 @@ suite('cards view >', function() {
 
   suite('empty cards view >', function() {
     setup(function(done) {
+      MockStackManager.mStack = [];
+      MockStackManager.mCurrent = -1;
       CardsView.showCardSwitcher(true);
       setTimeout(done);
+    });
+
+    teardown(function() {
+      CardsView.hideCardSwitcher(true);
     });
 
     test('focuses rocketbar input on empty cards view', function(done) {
@@ -289,7 +385,77 @@ suite('cards view >', function() {
       });
     });
   });
+
+  suite('one app is displayed >', function() {
+    setup(function() {
+      MockStackManager.mStack = [apps['http://sms.gaiamobile.org']];
+      MockStackManager.mCurrent = 0;
+      MockAppWindowManager.mRunningApps = {
+        'http://sms.gaiamobile.org': apps['http://sms.gaiamobile.org']
+      };
+      CardsView.showCardSwitcher(true);
+    });
+
+    teardown(function() {
+      CardsView.hideCardSwitcher(true);
+    });
+
+    test('Prevent reflowing during swipe to remove', function() {
+      var card = document.querySelector('.card');
+
+      var touchstart = createTouchEvent('touchstart', card, 0, 500);
+      var touchmove = createTouchEvent('touchmove', card, 0, 200);
+      var touchend = createTouchEvent('touchend', card, 0, 200);
+
+      assert.isFalse(card.dispatchEvent(touchstart));
+      assert.isFalse(card.dispatchEvent(touchmove));
+      assert.isFalse(card.dispatchEvent(touchend));
+    });
+  });
+
+  suite('tapping on an app >', function() {
+    var handler = {
+      handleEvent: function(event) {
+        if (event.type == 'cardviewclosed' &&
+            event.detail.newStackPosition &&
+            event.detail.newStackPosition == this.expectedStackPosition) {
+          assert.isTrue(CardsView.cardSwitcherIsShown(),
+                        'cards view should still be visible');
+          this.done();
+        }
+      }
+    };
+
+    setup(function() {
+      MockStackManager.mStack = [apps['http://sms.gaiamobile.org']];
+      MockStackManager.mCurrent = 0;
+      MockAppWindowManager.mRunningApps = {
+        'http://sms.gaiamobile.org': apps['http://sms.gaiamobile.org']
+      };
+
+      CardsView.showCardSwitcher(true);
+      window.addEventListener('cardviewclosed', handler);
+    });
+
+    teardown(function() {
+      window.removeEventListener('cardviewclosed', handler);
+      CardsView.hideCardSwitcher(true);
+    });
+
+    test('displays the new app before dismissing the cards view',
+    function(done) {
+      handler.done = done;
+      handler.expectedStackPosition = 0;
+
+      var target = document.getElementById('cards-list').childNodes[0];
+      var fakeEvent = {
+        type: 'tap',
+        target: target
+      };
+
+      CardsView.handleEvent(fakeEvent);
+    });
+  });
 });
 
 mocha.setup({ignoreLeaks: false});
-

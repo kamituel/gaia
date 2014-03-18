@@ -66,15 +66,9 @@
  * @recording=true
  */
 
+.controls[cancel=true] .gallery-button,
 .controls[recording=true] .gallery-button {
   display: none;
-}
-
-/** Gallery Button Icon
- ---------------------------------------------------------*/
-
-.gallery-button span {
-  /*background-image: url(images/grid.png);*/
 }
 
 /** Cancel Pick Button
@@ -84,6 +78,7 @@
   display: none;
   width: 100%;
   height: 100%;
+  background: url(images/actionicon_cancel.png) center no-repeat;
 }
 
 /**
@@ -92,13 +87,6 @@
 
 .controls[cancel=true] .cancel-pick {
   display: block;
-}
-
-/** Cancel Pick Button Icon
- ---------------------------------------------------------*/
-
-.cancel-pick span {
-  background-image: url(images/actionicon_cancel.png);
 }
 
 /** Video Timer
@@ -155,7 +143,7 @@
  */
 
 .controls[mode=picture] .capture-button span:before {
-  content: "\e60f"; */
+  content: "\e60f";
   /* background-image: url(images/camera.png); */
 }
 
@@ -189,6 +177,10 @@
   margin-top: -1.5rem;
   width: 3rem;
   height: 3rem;
+}
+
+.controls[recording=true] .capture-button span:before {
+  visibility: hidden;
 }
 
 /** Switch Button

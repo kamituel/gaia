@@ -104,6 +104,17 @@ suite('system/AppWindow', function() {
     }
   };
 
+<<<<<<< HEAD
+=======
+  var fakeChromeConfigWithoutNavigation = {
+    url: 'http://www.fakeChrome2/index.html',
+    origin: 'http://www.fakeChrome2',
+    manifest: {
+      chrome: { 'navigation': false }
+    }
+  };
+
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
   test('App created with instanceID', function() {
     var app1 = new AppWindow(fakeAppConfig1);
     var app2 = new AppWindow(fakeAppConfig2);
@@ -170,13 +181,27 @@ suite('system/AppWindow', function() {
     test('Would get the height of chrome\'s button bar', function() {
       var stubGetBarHeight =
         this.sinon.stub(AppChrome.prototype, 'getBarHeight');
+<<<<<<< HEAD
+=======
+      var spy = this.sinon.spy(window, 'AppChrome');
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
       var chromeApp = new AppWindow(fakeChromeConfig);
       var stubIsActive = this.sinon.stub(chromeApp, 'isActive');
       stubIsActive.returns(true);
       chromeApp.resize();
       assert.isTrue(stubGetBarHeight.called);
+<<<<<<< HEAD
       stubGetBarHeight.restore();
       stubIsActive.restore();
+=======
+      assert.isTrue(spy.calledWithNew());
+    });
+
+    test('No navigation setting in manifest', function() {
+      var spy = this.sinon.spy(window, 'AppChrome');
+      var chromeApp = new AppWindow(fakeChromeConfigWithoutNavigation);
+      assert.isFalse(spy.calledWithNew());
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
     });
   });
 
@@ -823,7 +848,9 @@ suite('system/AppWindow', function() {
       var app2 = new AppWindow(fakeAppConfig2);
       var spyRequestOpen = this.sinon.spy(app1, 'requestOpen');
       var stubPublish = this.sinon.stub(app1, 'publish');
+      var stubIsActive = this.sinon.stub(app2, 'isActive');
       app1.setActivityCallee(app2);
+      stubIsActive.returns(true);
 
       assert.deepEqual(app1.activityCallee, app2);
       assert.deepEqual(app2.activityCaller, app1);
@@ -963,28 +990,28 @@ suite('system/AppWindow', function() {
 
     test('Localized event', function() {
       var app1 = new AppWindow(fakeAppConfig1);
-      var spy = this.sinon.spy(window, 'ManifestHelper');
+      var spyManifestHelper = this.sinon.spy(window, 'ManifestHelper');
       var stubPublish = this.sinon.stub(app1, 'publish');
 
       app1.handleEvent({
         type: '_localized'
       });
 
-      assert.isTrue(spy.calledWithNew());
-      assert.isTrue(spy.calledWithExactly(app1.manifest));
+      assert.isTrue(spyManifestHelper.calledWithNew());
+      assert.isTrue(spyManifestHelper.calledWithExactly(app1.manifest));
       assert.isTrue(stubPublish.calledWithExactly('namechanged'));
     });
 
     test('Localized event', function() {
       var app1 = new AppWindow(fakeAppConfig1);
-      var spy = this.sinon.spy(window, 'ManifestHelper');
+      var spyManifestHelper = this.sinon.spy(window, 'ManifestHelper');
 
       app1.handleEvent({
         type: '_localized'
       });
 
-      assert.isTrue(spy.calledWithNew());
-      assert.isTrue(spy.calledWithExactly(app1.manifest));
+      assert.isTrue(spyManifestHelper.calledWithNew());
+      assert.isTrue(spyManifestHelper.calledWithExactly(app1.manifest));
     });
 
     test('Swipe in event', function() {
@@ -992,15 +1019,25 @@ suite('system/AppWindow', function() {
       var atc1 = {
         switchTransitionState: function() {}
       };
+<<<<<<< HEAD
       var spy = this.sinon.spy(atc1, 'switchTransitionState');
       var revive = this.sinon.spy(app1, 'reviveBrowser');
+=======
+      var switchTransitionState =
+        this.sinon.stub(atc1, 'switchTransitionState');
+      var revive = this.sinon.stub(app1, 'reviveBrowser');
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
       app1.transitionController = atc1;
 
       app1.handleEvent({
         type: '_swipein'
       });
 
+<<<<<<< HEAD
       assert.isTrue(spy.calledWith('opened'));
+=======
+      assert.isTrue(switchTransitionState.calledWith('opened'));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
       assert.isTrue(revive.called);
     });
 
@@ -1009,14 +1046,15 @@ suite('system/AppWindow', function() {
       var atc1 = {
         switchTransitionState: function() {}
       };
-      var spy = this.sinon.spy(atc1, 'switchTransitionState');
+      var switchTransitionState =
+        this.sinon.stub(atc1, 'switchTransitionState');
       app1.transitionController = atc1;
 
       app1.handleEvent({
         type: '_swipeout'
       });
 
-      assert.isTrue(spy.calledWith('closed'));
+      assert.isTrue(switchTransitionState.calledWith('closed'));
     });
   });
 
@@ -1041,10 +1079,18 @@ suite('system/AppWindow', function() {
   test('revive browser', function() {
     var app1 = new AppWindow(fakeWrapperConfig);
     var stubPublish = this.sinon.stub(app1, 'publish');
+<<<<<<< HEAD
+=======
+    var stub_setVisble = this.sinon.stub(app1, '_setVisible');
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
     app1.browser = null;
     app1.reviveBrowser();
     assert.isNotNull(app1.browser);
     assert.isFalse(app1.suspended);
+<<<<<<< HEAD
+=======
+    assert.isTrue(stub_setVisble.calledWith(false));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
     assert.isTrue(stubPublish.calledWith('resumed'));
   });
 
@@ -1052,7 +1098,11 @@ suite('system/AppWindow', function() {
     var app1 = new AppWindow(fakeWrapperConfig);
     var stubPublish = this.sinon.stub(app1, 'publish');
     var stub_setFrameBackgroundWithScreenshot =
+<<<<<<< HEAD
       this.sinon.spy(app1, 'setFrameBackgroundWithScreenshot');
+=======
+      this.sinon.stub(app1, 'setFrameBackgroundWithScreenshot');
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
     app1.destroyBrowser();
     assert.isNull(app1.browser);
     assert.isTrue(app1.suspended);

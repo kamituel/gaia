@@ -37,6 +37,14 @@ var Contacts = (function() {
 
   var customTag, customTagReset, tagDone, tagCancel, lazyLoadedTagsDom = false;
 
+  // Shows the edit form for the current contact being in an update activity
+  // It receives an array of two elements with the facebook data && values
+  function showEditForm(facebookData, params) {
+    contactsForm.render(currentContact, goToForm,
+                                    facebookData, params['fromUpdateActivity']);
+    showApp();
+  }
+
   var checkUrl = function checkUrl() {
     var hasParams = window.location.hash.split('?');
     var hash = hasParams[0];
@@ -81,11 +89,22 @@ var Contacts = (function() {
                 if ('extras' in params) {
                   addExtrasToContact(params['extras']);
                 }
-                contactsForm.render(currentContact, goToForm,
-                                    null, params['fromUpdateActivity']);
-                showApp();
+                if (fb.isFbContact(savedContact)) {
+                  var fbContact = new fb.Contact(savedContact);
+                  var req = fbContact.getDataAndValues();
+                  req.onsuccess = function() {
+                    showEditForm(req.result, params);
+                  };
+                  req.onerror = function() {
+                    console.error('Error retrieving FB information');
+                    showEditForm(null, params);
+                  };
+                }
+                else {
+                  showEditForm(null, params);
+                }
               }, function onError() {
-                console.log('Error retrieving contact to be edited');
+                console.error('Error retrieving contact to be edited');
                 contactsForm.render(null, goToForm);
                 showApp();
               });
@@ -168,8 +187,13 @@ var Contacts = (function() {
         {type: 'other', value: _('other')}
       ],
       'address-type' : [
+        {type: 'current', value: _('current')},
         {type: 'home', value: _('home')},
         {type: 'work', value: _('work')}
+      ],
+      'date-type': [
+        {type: 'birthday', value: _('birthday')},
+        {type: 'anniversary', value: _('anniversary')}
       ]
     };
   };
@@ -355,6 +379,13 @@ var Contacts = (function() {
     var selectedTagType = contactTag.dataset.taglist;
     var options = TAG_OPTIONS[selectedTagType];
 
+    var type = selectedTagType.split('-')[0];
+    var isCustomTagVisible = (document.querySelector(
+      '[data-template]' + '.' + type + '-' +
+      'template').dataset.custom != 'false');
+
+    options = ContactsTag.filterTags(type, contactTag, options);
+
     if (!customTag) {
       customTag = document.querySelector('#custom-tag');
       customTag.addEventListener('keydown', handleCustomTag);
@@ -376,7 +407,13 @@ var Contacts = (function() {
     for (var i in options) {
       options[i].value = _(options[i].type);
     }
+
     ContactsTag.setCustomTag(customTag);
+    // Set whether the custom tag is visible or not
+    // This is needed for dates as we only support bday and anniversary
+    // and not custom dates
+    ContactsTag.setCustomTagVisibility(isCustomTagVisible);
+
     ContactsTag.fillTagOptions(tagsList, contactTag, options);
 
     navigation.go('view-select-tag', 'right-left');
@@ -405,27 +442,6 @@ var Contacts = (function() {
     if (!ActivityHandler.currentlyHandling ||
         ActivityHandler.activityName === 'open')
       SmsIntegration.sendSms(number);
-  };
-
-  var callOrPick = function callOrPick(number) {
-    LazyLoader.load('/dialer/js/mmi.js', function mmiLoaded() {
-      if (ActivityHandler.currentlyHandling &&
-          ActivityHandler.activityName !== 'open') {
-        ActivityHandler.postPickSuccess({ number: number });
-      } else if (MmiManager.isMMI(number)) {
-        // For security reasons we cannot directly call MmiManager.send(). We
-        // need to show the MMI number in the dialer instead.
-        new MozActivity({
-          name: 'dial',
-          data: {
-            type: 'webtelephony/number',
-            number: number
-          }
-        });
-      } else if (navigator.mozTelephony) {
-        TelephonyHelper.call(number);
-      }
-    });
   };
 
   var handleBack = function handleBack() {
@@ -548,15 +564,20 @@ var Contacts = (function() {
       callback();
     } else {
       Contacts.view('Details', function viewLoaded() {
-        detailsReady = true;
-        contactsDetails = contacts.Details;
-        contactsDetails.init();
-        callback();
+        var simPickerNode = document.getElementById('sim-picker');
+        LazyLoader.load([simPickerNode], function() {
+          navigator.mozL10n.translate(simPickerNode);
+          detailsReady = true;
+          contactsDetails = contacts.Details;
+          contactsDetails.init();
+          callback();
+        });
       });
     }
   };
 
-  var showForm = function c_showForm(edit) {
+  var showForm = function c_showForm(edit, contact) {
+    currentContact = contact || currentContact;
     initForm(function onInit() {
       doShowForm(edit);
     });
@@ -746,6 +767,7 @@ var Contacts = (function() {
             function success(contact, enrichedContact) {
               currentContact = contact;
               var mergedContact = enrichedContact || contact;
+              contactsDetails.setContact(mergedContact);
               contactsDetails.render(mergedContact, null, enrichedContact);
               contactsList.refresh(mergedContact, checkPendingChanges,
                                    event.reason);
@@ -890,7 +912,6 @@ var Contacts = (function() {
     'cancel': handleCancel,
     'goToSelectTag': goToSelectTag,
     'sendSms': sendSms,
-    'callOrPick': callOrPick,
     'navigation': navigation,
     'sendEmailOrPick': sendEmailOrPick,
     'updatePhoto': updatePhoto,

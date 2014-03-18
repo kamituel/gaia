@@ -1,9 +1,10 @@
 /* -*- Mode: js; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- /
 /* vim: set shiftwidth=2 tabstop=2 autoindent cindent expandtab: */
 
-/*global Template, Utils, Threads, Contacts, URL, Threads,
+/*global Template, Utils, Threads, Contacts, Threads,
          WaitingScreen, MozSmsFilter, MessageManager, TimeHeaders,
-         Drafts, Thread, ThreadUI, OptionMenu, ActivityPicker */
+         Drafts, Thread, ThreadUI, OptionMenu, ActivityPicker,
+         PerformanceTestingHelper, StickyHeader */
 
 /*exported ThreadListUI */
 (function(exports) {
@@ -80,6 +81,9 @@ var ThreadListUI = {
 
     this.draftLinks = new Map();
     ThreadListUI.draftRegistry = {};
+
+    this.sticky =
+      new StickyHeader(this.container, document.getElementById('sticky'));
   },
 
   getAllInputs: function thlui_getAllInputs() {
@@ -130,7 +134,7 @@ var ThreadListUI = {
 
     Contacts.findByPhoneNumber(number, function gotContact(contacts) {
       var name = node.getElementsByClassName('name')[0];
-      var photo = node.getElementsByTagName('img')[0];
+      var photo = node.querySelector('span[data-type=img]');
       var title, src, details;
 
       if (contacts && contacts.length) {
@@ -145,10 +149,7 @@ var ThreadListUI = {
       }
 
       if (src) {
-        photo.onload = photo.onerror = function revokePhotoURL() {
-          this.onload = this.onerror = null;
-          URL.revokeObjectURL(this.src);
-        };
+        Utils.asyncLoadRevokeURL(src);
       }
 
       navigator.mozL10n.localize(name, 'thread-header-text', {
@@ -156,7 +157,7 @@ var ThreadListUI = {
         n: others
       });
 
-      photo.src = src;
+      photo.style.backgroundImage = 'url(' + src + ')';
     });
   },
 
@@ -247,6 +248,8 @@ var ThreadListUI = {
     if (parent && !parent.firstElementChild) {
       parent.previousSibling.remove();
       parent.remove();
+
+      this.sticky.refresh();
 
       // if we have no more elements, set empty classes
       if (!this.container.querySelector('li')) {
@@ -399,6 +402,8 @@ var ThreadListUI = {
           }
         }
       }, this);
+
+      this.sticky.refresh();
     }.bind(this));
   },
 
@@ -419,10 +424,15 @@ var ThreadListUI = {
     if (!empty) {
       TimeHeaders.updateAll('header[data-time-update]');
     }
+
+    this.sticky.refresh();
   },
 
   renderThreads: function thlui_renderThreads(done) {
+    PerformanceTestingHelper.dispatch('will-render-threads');
+
     var hasThreads = false;
+    var firstPanelCount = 9; // counted on a Peak
 
     this.prepareRendering();
 
@@ -434,6 +444,9 @@ var ThreadListUI = {
       }
 
       this.appendThread(thread);
+      if (--firstPanelCount === 0) {
+        PerformanceTestingHelper.dispatch('above-the-fold-ready');
+      }
     }
 
     function onThreadsRendered() {
@@ -442,6 +455,8 @@ var ThreadListUI = {
       /* We set the view as empty only if there's no threads and no drafts,
        * this is done to prevent races between renering threads and drafts. */
       this.finalizeRendering(!(hasThreads || Drafts.size));
+
+      PerformanceTestingHelper.dispatch('startup-path-done');
     }
 
     var renderingOptions = {
@@ -595,6 +610,7 @@ var ThreadListUI = {
     }
     this.appendThread(thread);
     this.setEmpty(false);
+    this.sticky.refresh();
   },
 
   onMessageSending: function thlui_onMessageSending(message) {
@@ -658,6 +674,10 @@ var ThreadListUI = {
     var threadContainer = document.createElement('div');
     // Create Header DOM Element
     var headerDOM = document.createElement('header');
+
+    // The id is used by the sticky header code as the -moz-element target.
+    headerDOM.id = 'header_' + timestamp;
+
     // Append 'time-update' state
     headerDOM.dataset.timeUpdate = 'repeat';
     headerDOM.dataset.time = timestamp;

@@ -15,8 +15,13 @@ requireApp('system/test/unit/mock_lock_screen.js', function() {
   // can't be "MocklockScreen".
   window.lockScreen = MockLockScreen;
 });
+<<<<<<< HEAD
 requireApp('system/test/unit/mock_simslot.js');
 requireApp('system/test/unit/mock_simslot_manager.js');
+=======
+requireApp('system/js/mock_simslot.js');
+requireApp('system/js/mock_simslot_manager.js');
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
 requireApp('system/test/unit/mock_app_window_manager.js');
 requireApp('system/test/unit/mock_ftu_launcher.js');
 requireApp('system/test/unit/mock_touch_forwarder.js');
@@ -30,7 +35,11 @@ var mocksForStatusBar = new MocksHelper([
   'TouchForwarder'
 ]).init();
 
+<<<<<<< HEAD
 mocha.globals(['Clock', 'StatusBar', 'lockScreen']);
+=======
+mocha.globals(['Clock', 'StatusBar', 'lockScreen', 'System']);
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
 suite('system/Statusbar', function() {
   var mobileConnectionCount = 2;
   var fakeStatusBarNode, fakeTopPanel;
@@ -111,6 +120,26 @@ suite('system/Statusbar', function() {
       assert.equal(Object.keys(fakeIcons.signals).length,
         mobileConnectionCount);
       assert.equal(Object.keys(fakeIcons.data).length, mobileConnectionCount);
+    });
+  });
+
+  suite('StatusBar height', function() {
+    var app;
+    setup(function() {
+      app = {
+        isFullScreen: function() {
+          return true;
+        }
+      };
+
+      this.sinon.stub(MockAppWindowManager, 'getActiveApp').returns(app);
+      StatusBar.screen = document.createElement('div');
+    });
+    teardown(function() {
+      StatusBar.screen = null;
+    });
+    test('Active app is fullscreen', function() {
+      assert.equal(StatusBar.height, 0);
     });
   });
 
@@ -713,6 +742,34 @@ suite('system/Statusbar', function() {
     });
   });
 
+  suite('call forwarding', function() {
+    setup(function() {
+      var defaultValue = [];
+      for (var i = 0; i < mobileConnectionCount; i++) {
+        defaultValue.push(false);
+      }
+      StatusBar.settingValues['ril.cf.enabled'] = defaultValue;
+    });
+
+    for (var i = 0; i < mobileConnectionCount; i++) {
+      (function(slotIndex) {
+        suite('slot: ' + slotIndex, function() {
+          test('call forwarding enabled', function() {
+            StatusBar.settingValues['ril.cf.enabled'][slotIndex] = true;
+            StatusBar.update.callForwarding.call(StatusBar);
+            assert.isFalse(StatusBar.icons.callForwardings[slotIndex].hidden);
+          });
+
+          test('call forwarding disabled', function() {
+            StatusBar.settingValues['ril.cf.enabled'][slotIndex] = false;
+            StatusBar.update.callForwarding.call(StatusBar);
+            assert.isTrue(StatusBar.icons.callForwardings[slotIndex].hidden);
+          });
+        });
+      })(i);
+    }
+  });
+
   suite('data connection', function() {
     for (var i = 0; i < mobileConnectionCount; i++) {
       (function(slotIndex) {
@@ -1073,6 +1130,19 @@ suite('system/Statusbar', function() {
   });
 
   suite('media information', function() {
+    var fakeClock;
+    var recordingSpy;
+
+    setup(function() {
+      fakeClock = this.sinon.useFakeTimers();
+      recordingSpy = this.sinon.spy(StatusBar.update, 'recording');
+    });
+
+    teardown(function() {
+      StatusBar.recordingCount = 0;
+      fakeClock.restore();
+    });
+
     test('geolocation is activating', function() {
       var evt = new CustomEvent('mozChromeEvent', {
         detail: {
@@ -1083,16 +1153,18 @@ suite('system/Statusbar', function() {
       StatusBar.handleEvent(evt);
       assert.equal(StatusBar.icons.geolocation.hidden, false);
     });
-    test('camera is recording', function() {
-      var evt = new CustomEvent('mozChromeEvent', {
+
+    test('media_recording is activating', function() {
+      var evt = new CustomEvent('recordingEvent', {
         detail: {
-          type: 'recording-status',
+          type: 'recording-state-changed',
           active: true
         }
       });
       StatusBar.handleEvent(evt);
       assert.equal(StatusBar.icons.recording.hidden, false);
     });
+
     test('usb is unmounting', function() {
       var evt = new CustomEvent('mozChromeEvent', {
         detail: {
@@ -1103,6 +1175,7 @@ suite('system/Statusbar', function() {
       StatusBar.handleEvent(evt);
       assert.equal(StatusBar.icons.usb.hidden, false);
     });
+
     test('headphones is plugged in', function() {
       var evt = new CustomEvent('mozChromeEvent', {
         detail: {
@@ -1113,6 +1186,7 @@ suite('system/Statusbar', function() {
       StatusBar.handleEvent(evt);
       assert.equal(StatusBar.icons.headphones.hidden, false);
     });
+
     test('audio player is playing', function() {
       var evt = new CustomEvent('mozChromeEvent', {
         detail: {
@@ -1165,7 +1239,7 @@ suite('system/Statusbar', function() {
     setup(function() {
       app = {
         isFullScreen: function() {
-          return true;
+          return false;
         },
         iframe: document.createElement('iframe')
       };
@@ -1176,26 +1250,6 @@ suite('system/Statusbar', function() {
       });
 
       StatusBar.screen = document.createElement('div');
-    });
-
-    test('the status bar should open when the utilitytray is shown',
-    function() {
-      StatusBar.hide();
-
-      var evt = new CustomEvent('utilitytrayshow');
-      StatusBar.handleEvent(evt);
-
-      assert.isFalse(StatusBar.element.classList.contains('invisible'));
-    });
-
-    test('the status bar should close when the utilitytray is hidden',
-    function() {
-      StatusBar.show();
-
-      var evt = new CustomEvent('utilitytrayhide');
-      StatusBar.handleEvent(evt);
-
-      assert.isTrue(StatusBar.element.classList.contains('invisible'));
     });
 
     test('the status bar should not close if the current app is not fullscreen',
@@ -1209,28 +1263,58 @@ suite('system/Statusbar', function() {
       assert.isFalse(StatusBar.element.classList.contains('invisible'));
     });
 
-    test('the status bar should open when the rocketbar is shown',
+    test('the status bar should show when utilitytray is showing',
     function() {
+      this.sinon.stub(app, 'isFullScreen').returns(true);
       StatusBar.hide();
 
-      var evt = new CustomEvent('rocketbarshown');
+      var evt = new CustomEvent('utilitytrayshow');
       StatusBar.handleEvent(evt);
 
       assert.isFalse(StatusBar.element.classList.contains('invisible'));
     });
 
-    test('the status bar should close when the rocketbar is hidden',
+    test('the status bar should show when attentionscreen is showing',
     function() {
+      this.sinon.stub(app, 'isFullScreen').returns(true);
+      StatusBar.hide();
+
+      var evt = new CustomEvent('attentionscreenshow');
+      StatusBar.handleEvent(evt);
+
+      assert.isFalse(StatusBar.element.classList.contains('invisible'));
+    });
+
+    test('the status bar should be hidden when attentionscreen is hidden',
+    function() {
+      this.sinon.stub(app, 'isFullScreen').returns(true);
       StatusBar.show();
 
-      var evt = new CustomEvent('rocketbarhidden');
+      var evt = new CustomEvent('attentionscreenhide');
       StatusBar.handleEvent(evt);
 
       assert.isTrue(StatusBar.element.classList.contains('invisible'));
     });
 
     suite('Revealing the StatusBar >', function() {
+      var transitionEndSpy;
+      setup(function() {
+        transitionEndSpy = this.sinon.spy(StatusBar.element,
+                                          'addEventListener');
+      });
+
+      function assertStatusBarReleased() {
+        assert.equal(StatusBar.element.style.transform, '');
+        assert.equal(StatusBar.element.style.transition, '');
+
+        // We remove the background after the transition
+        assert.isTrue(StatusBar.element.classList.contains('dragged'));
+        transitionEndSpy.yield();
+        assert.isFalse(StatusBar.element.classList.contains('dragged'));
+      }
+
       teardown(function() {
+        StatusBar.element.style.transition = '';
         StatusBar.element.style.transform = '';
       });
 
@@ -1240,6 +1324,12 @@ suite('system/Statusbar', function() {
         var transform = 'translateY(calc(5px - 100%))';
 
         assert.equal(StatusBar.element.style.transform, transform);
+        fakeDispatch('touchend', 100, 5);
+      });
+
+      test('it should set the dragged class on touchstart', function() {
+        fakeDispatch('touchstart', 100, 0);
+        assert.isTrue(StatusBar.element.classList.contains('dragged'));
         fakeDispatch('touchend', 100, 5);
       });
 
@@ -1271,8 +1361,7 @@ suite('system/Statusbar', function() {
           });
 
           test('it should hide it right away', function() {
-            assert.equal(StatusBar.element.style.transform, '');
-            assert.equal(StatusBar.element.style.transition, '');
+            assertStatusBarReleased();
           });
         });
 
@@ -1293,8 +1382,7 @@ suite('system/Statusbar', function() {
 
           test('but after 5 seconds', function() {
             this.sinon.clock.tick(5000);
-            assert.equal(StatusBar.element.style.transform, '');
-            assert.equal(StatusBar.element.style.transition, '');
+            assertStatusBarReleased();
           });
 
           test('or if the user interacts with the app', function() {
@@ -1305,8 +1393,7 @@ suite('system/Statusbar', function() {
             var e = forgeTouchEvent('touchstart', 100, 100);
             window.dispatchEvent(e);
 
-            assert.equal(StatusBar.element.style.transform, '');
-            assert.equal(StatusBar.element.style.transition, '');
+            assertStatusBarReleased();
             StatusBar._touchForwarder.destination = iframe;
           });
         });
@@ -1379,6 +1466,32 @@ suite('system/Statusbar', function() {
         call = forwardSpy.getCall(3);
         assert.equal(call.args[0], touchend);
       });
+    });
+  });
+
+  suite('not fullscreen mode >', function() {
+    var app;
+    setup(function() {
+      app = {
+        isFullScreen: function() {
+          return true;
+        },
+        iframe: document.createElement('iframe')
+      };
+
+      this.sinon.stub(MockAppWindowManager, 'getActiveApp').returns(app);
+      StatusBar.screen = document.createElement('div');
+    });
+
+    test('the status bar should not be hidden when attentionscreen is hidden',
+    function() {
+      this.sinon.stub(app, 'isFullScreen').returns(false);
+      StatusBar.show();
+
+      var evt = new CustomEvent('attentionscreenhide');
+      StatusBar.handleEvent(evt);
+
+      assert.isFalse(StatusBar.element.classList.contains('invisible'));
     });
   });
 });

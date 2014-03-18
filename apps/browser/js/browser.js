@@ -1,6 +1,5 @@
 'use strict';
 
-var rscheme = /^(?:[a-z\u00a1-\uffff0-9-+]+)(?::|:\/\/)/i;
 var _ = navigator.mozL10n.get;
 
 var Browser = {
@@ -668,7 +667,7 @@ var Browser = {
   },
 
   getUrlFromInput: function browser_getUrlFromInput(input) {
-    var hasScheme = !!(rscheme.exec(input) || [])[0];
+    var hasScheme = UrlHelper.hasScheme(input);
 
     // Not a valid URL, could be a search term
     if (UrlHelper.isNotURL(input) && this.searchEngine.uri) {
@@ -833,9 +832,9 @@ var Browser = {
 
       this.bookmarkUrl.addEventListener('keydown', (function() {
         if (UrlHelper.isURL(this.bookmarkUrl.value)) {
-          this.bookmarkEntrySheetDone.disabled = 'disabled';
+          this.bookmarkEntrySheetDone.removeAttribute('disabled');
         } else {
-          this.bookmarkEntrySheetDone.disabled = '';
+          this.bookmarkEntrySheetDone.disabled = 'disabled';
         }
       }).bind(this), false);
     }).bind(this));

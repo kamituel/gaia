@@ -319,7 +319,9 @@ function handleScreenLayoutChange() {
       if (isPortrait) {
         hidePlayer(true);
       } else {
-        showPlayer(currentVideo, false, false, true);
+        showPlayer(currentVideo, false, /* autoPlay */
+                                 false, /* enterFullscreen */
+                                 true); /* keepControls */
       }
     }
     // the maximum lines of title field is different in portrait or landscape
@@ -432,7 +434,9 @@ function hideSelectView() {
   switchLayout(LAYOUT_MODE.list);
   if (!isPhone && !isPortrait && currentVideo) {
     // We need to load the video while restoring to list mode
-    showPlayer(currentVideo, false, false, true);
+    showPlayer(currentVideo, false, /* autoPlay */
+                             false, /* enterFullscreen */
+                             true); /* keepControls */
   }
 }
 
@@ -678,7 +682,9 @@ function updateLoadingSpinner() {
       // mode.
       currentVideo = thumbnailList.itemGroups[0].thumbnails[0].data;
       if (!isPhone && !isPortrait) {
-        showPlayer(currentVideo, false, false, true);
+        showPlayer(currentVideo, false, /* autoPlay */
+                                 false, /* enterFullscreen */
+                                 true); /* keepControls */
       }
     }
   }
@@ -746,7 +752,7 @@ function showOverlay(id) {
 
   if (id === 'nocard') {
     dom.overlayTitle.textContent = _('nocard2-title');
-    dom.overlayText.textContent = _('nocard2-text');
+    dom.overlayText.textContent = _('nocard3-text');
   } else {
     dom.overlayTitle.textContent = _(id + '-title');
     dom.overlayText.textContent = _(id + '-text');
@@ -901,10 +907,6 @@ function showPlayer(video, autoPlay, enterFullscreen, keepControls) {
   var thumbnail = thumbnailList.thumbnailMap[currentVideo.name];
   thumbnail.htmlNode.classList.add('focused');
 
-  if (enterFullscreen) {
-    switchLayout(LAYOUT_MODE.fullscreenPlayer);
-  }
-
   // switch to the video player view
   updateDialog();
   dom.player.preload = 'metadata';
@@ -926,6 +928,10 @@ function showPlayer(video, autoPlay, enterFullscreen, keepControls) {
   }
 
   setVideoUrl(dom.player, currentVideo, function() {
+
+    if (enterFullscreen) {
+      switchLayout(LAYOUT_MODE.fullscreenPlayer);
+    }
 
     dom.durationText.textContent = MediaUtils.formatDuration(
       dom.player.duration);

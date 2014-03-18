@@ -172,6 +172,12 @@ var CostControlApp = (function() {
       }
     });
   }
+  // XXX: the clearLastSimScenario method must be included on Bug 968087 -
+  // [Cost Control] Refactor and simplify Cost Control start-up process.
+  function clearLastSimScenario(callback) {
+    Common.closeFTE();
+    (typeof callback === 'function') && callback();
+  }
 
   function startApp(callback) {
 
@@ -275,7 +281,7 @@ var CostControlApp = (function() {
     // Refresh UI when the user changes the SIM for data connections
     SettingsListener.observe('ril.data.defaultServiceId', 0, function() {
       if (!isFirstCall) {
-        Common.loadDataSIMIccId(startApp);
+        clearLastSimScenario(Common.loadDataSIMIccId.bind(null, startApp));
       } else {
         isFirstCall = false;
       }
@@ -388,10 +394,7 @@ var CostControlApp = (function() {
           setAttribute('aria-hidden', 'true');
 
         // Only hide the FTE view when everything in the UI is ready
-        startApp(function() {
-          document.getElementById('fte_view').classList.add('non-ready');
-          document.getElementById('fte_view').src = '';
-        });
+        startApp(Common.closeFTE);
       }
     });
 
@@ -399,17 +402,32 @@ var CostControlApp = (function() {
     Common.startFTE(mode);
   }
 
+  function initApp() {
+    vmanager = new ViewManager();
+    waitForSIMReady(function _onSIMReady() {
+      document.getElementById('message-handler').src = 'message_handler.html';
+      Common.waitForDOMAndMessageHandler(window, startApp);
+    });
+    // XXX: See bug 944342 -[Cost control] move all the process related to the
+    // network and data interfaces loading to the start-up process of CC
+    Common.loadNetworkInterfaces();
+  }
+
   return {
     init: function() {
-      vmanager = new ViewManager();
-      waitForSIMReady(function _onSIMReady() {
-        document
-          .getElementById('message-handler').src = 'message_handler.html';
-        Common.waitForDOMAndMessageHandler(window, startApp);
-      });
-      // XXX: See bug 944342 -[Cost control] move all the process related to the
-      // network and data interfaces loading to the start-up process of CC
-      Common.loadNetworkInterfaces();
+      var SCRIPTS_NEEDED = [
+        'js/utils/debug.js',
+        'js/utils/formatting.js',
+        'js/utils/toolkit.js',
+        'js/settings/networkUsageAlarm.js',
+        'js/common.js',
+        'js/costcontrol.js',
+        'js/costcontrol_init.js',
+        'js/config/config_manager.js',
+        'js/views/NonReadyScreen.js',
+        'js/view_manager.js'
+      ];
+      LazyLoader.load(SCRIPTS_NEEDED, initApp);
     },
     reset: function() {
       costcontrol = null;

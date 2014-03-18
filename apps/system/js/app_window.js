@@ -310,6 +310,8 @@
     this.element.appendChild(this.browser.element);
     this.launchTime = Date.now();
     this.suspended = false;
+    // Launch as background by default.
+    this._setVisible(false);
     this.publish('resumed');
   };
 
@@ -565,7 +567,8 @@
             new this.constructor.SUB_COMPONENTS[componentName](this);
         }
       }
-      if (this.config.chrome) {
+      if (this.config.chrome &&
+          this.config.chrome.navigation) {
         this.appChrome = new self.AppChrome(this);
       }
     };
@@ -606,7 +609,8 @@
     function aw__handle_mozbrowseractivitydone(evt) {
       // In case we're not ActivityWindow but we're launched
       // as window disposition activity.
-      if (this.activityCaller &&
+      if (this.isActive() &&
+          this.activityCaller &&
           this.activityCaller instanceof AppWindow) {
         var caller = this.activityCaller;
         this.activityCaller.activityCallee = null;
@@ -713,6 +717,17 @@
    */
   AppWindow.prototype.handleEvent = function aw_handleEvent(evt) {
     this.debug(' Handling ' + evt.type + ' event...');
+    // We are rendering inline activities inside this element too,
+    // so we need to prevent ourselves to be affected
+    // by the mozbrowser events of the callee.
+
+    // WebAPI testing is using mozbrowserloadend event to know
+    // the first app is loaded so we cannot stop the propagation here.
+    // XXX: Use this.bottomWindow to check if it has a layout parent instead
+    // in bug 916709.
+    if (this.CLASS_NAME == 'ActivityWindow') {
+      evt.stopPropagation();
+    }
     if (this['_handle_' + evt.type]) {
       this.debug(' Handling ' + evt.type + ' event...');
       this['_handle_' + evt.type](evt);

@@ -1,3 +1,7 @@
+'use strict';
+
+/* exported MockMozL10n */
+
 var MockMozL10n = {
   get: function get(key) {
     return key;
@@ -13,6 +17,12 @@ var MockMozL10n = {
   language: {
     code: 'en',
     dir: 'ltr'
+  },
+  ready: function(callback) {
+    callback();
+  },
+  localize: function(node, l10nId, l10nArgs) {
+
   }
 };
 

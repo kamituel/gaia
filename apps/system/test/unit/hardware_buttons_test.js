@@ -46,8 +46,13 @@ suite('system/HardwareButtons', function() {
     hardwareButtons = new HardwareButtons();
     hardwareButtons.start();
 
+<<<<<<< HEAD
     window.CustomEvent = function MockCustomEvent(type) {
       return { type: type };
+=======
+    window.CustomEvent = function MockCustomEvent(type, dict) {
+      return { type: type, bubbles: dict.bubbles };
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
     };
   });
 
@@ -68,7 +73,12 @@ suite('system/HardwareButtons', function() {
     fireChromeEvent('home-button-release');
 
     assert.isTrue(stubDispatchEvent.calledOnce);
+<<<<<<< HEAD
     assert.isTrue(stubDispatchEvent.calledWith({ type: 'home' }));
+=======
+    assert.isTrue(stubDispatchEvent.calledWith({ type: 'home',
+                                                 bubbles: true }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
 
     assert.isTrue(stubSetTimeout.calledOnce);
     assert.equal(stubSetTimeout.getCall(0).args[1],
@@ -89,7 +99,12 @@ suite('system/HardwareButtons', function() {
     fireChromeEvent('home-button-release');
 
     assert.isTrue(stubDispatchEvent.calledOnce);
+<<<<<<< HEAD
     assert.isTrue(stubDispatchEvent.calledWith({ type: 'wake' }));
+=======
+    assert.isTrue(stubDispatchEvent.calledWith({ type: 'wake',
+                                                 bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
 
     assert.isTrue(stubSetTimeout.calledOnce);
     assert.equal(stubSetTimeout.getCall(0).args[1],
@@ -109,7 +124,12 @@ suite('system/HardwareButtons', function() {
     fireChromeEvent('sleep-button-release');
 
     assert.isTrue(stubDispatchEvent.calledOnce);
+<<<<<<< HEAD
     assert.isTrue(stubDispatchEvent.calledWith({ type: 'sleep' }));
+=======
+    assert.isTrue(stubDispatchEvent.calledWith({ type: 'sleep',
+                                                 bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
 
     assert.isTrue(stubSetTimeout.calledOnce);
     assert.equal(stubSetTimeout.getCall(0).args[1],
@@ -130,7 +150,12 @@ suite('system/HardwareButtons', function() {
     fireChromeEvent('sleep-button-release');
 
     assert.isTrue(stubDispatchEvent.calledOnce);
+<<<<<<< HEAD
     assert.isTrue(stubDispatchEvent.calledWith({ type: 'wake' }));
+=======
+    assert.isTrue(stubDispatchEvent.calledWith({ type: 'wake',
+                                                 bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
 
     assert.isTrue(stubSetTimeout.calledOnce);
     assert.equal(stubSetTimeout.getCall(0).args[1],
@@ -149,7 +174,12 @@ suite('system/HardwareButtons', function() {
     fireChromeEvent('home-button-release');
 
     assert.isTrue(stubDispatchEvent.calledOnce);
+<<<<<<< HEAD
     assert.isTrue(stubDispatchEvent.calledWith({ type: 'home+sleep' }));
+=======
+    assert.isTrue(stubDispatchEvent.calledWith({ type: 'home+sleep',
+                                                 bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
   });
 
   test('hold home and press sleep (screen disabled)', function() {
@@ -166,9 +196,17 @@ suite('system/HardwareButtons', function() {
 
     assert.isTrue(stubDispatchEvent.calledTwice);
     assert.isTrue(
+<<<<<<< HEAD
       stubDispatchEvent.getCall(0).calledWith({ type: 'wake' }));
     assert.isTrue(
       stubDispatchEvent.getCall(1).calledWith({ type: 'home+sleep' }));
+=======
+      stubDispatchEvent.getCall(0).calledWith({ type: 'wake',
+                                                bubbles: false }));
+    assert.isTrue(
+      stubDispatchEvent.getCall(1).calledWith({ type: 'home+sleep',
+                                                bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
 
     assert.isTrue(stubSetTimeout.calledOnce);
     assert.equal(stubSetTimeout.getCall(0).args[1],
@@ -190,7 +228,12 @@ suite('system/HardwareButtons', function() {
     fireChromeEvent('home-button-release');
 
     assert.isTrue(stubDispatchEvent.calledOnce);
+<<<<<<< HEAD
     assert.isTrue(stubDispatchEvent.calledWith({ type: 'home+sleep' }));
+=======
+    assert.isTrue(stubDispatchEvent.calledWith({ type: 'home+sleep',
+                                                 bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
 
     assert.isTrue(stubSetTimeout.calledOnce);
     assert.equal(stubSetTimeout.getCall(0).args[1],
@@ -214,9 +257,17 @@ suite('system/HardwareButtons', function() {
 
     assert.isTrue(stubDispatchEvent.calledTwice);
     assert.isTrue(
+<<<<<<< HEAD
       stubDispatchEvent.getCall(0).calledWith({ type: 'wake' }));
     assert.isTrue(
       stubDispatchEvent.getCall(1).calledWith({ type: 'home+sleep' }));
+=======
+      stubDispatchEvent.getCall(0).calledWith({ type: 'wake',
+                                                bubbles: false }));
+    assert.isTrue(
+      stubDispatchEvent.getCall(1).calledWith({ type: 'home+sleep',
+                                                bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
 
     assert.isTrue(stubSetTimeout.calledOnce);
     assert.equal(stubSetTimeout.getCall(0).args[1],
@@ -242,7 +293,12 @@ suite('system/HardwareButtons', function() {
     fireChromeEvent('home-button-release');
 
     assert.isTrue(stubDispatchEvent.calledOnce);
+<<<<<<< HEAD
     assert.isTrue(stubDispatchEvent.calledWith({ type: 'holdhome' }));
+=======
+    assert.isTrue(stubDispatchEvent.calledWith({ type: 'holdhome',
+                                                 bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
     assert.isTrue(stubClearTimeout.calledOnce);
     assert.equal(stubClearTimeout.getCall(0).args[0],
       stubSetTimeout.getCall(0).returnValue);
@@ -266,9 +322,17 @@ suite('system/HardwareButtons', function() {
 
     assert.isTrue(stubDispatchEvent.calledTwice);
     assert.isTrue(
+<<<<<<< HEAD
       stubDispatchEvent.getCall(0).calledWith({ type: 'wake' }));
     assert.isTrue(
       stubDispatchEvent.getCall(1).calledWith({ type: 'holdhome' }));
+=======
+      stubDispatchEvent.getCall(0).calledWith({ type: 'wake',
+                                                bubbles: false }));
+    assert.isTrue(
+      stubDispatchEvent.getCall(1).calledWith({ type: 'holdhome',
+                                                bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
     assert.isTrue(stubClearTimeout.calledOnce);
     assert.equal(stubClearTimeout.getCall(0).args[0],
       stubSetTimeout.getCall(0).returnValue);
@@ -290,7 +354,12 @@ suite('system/HardwareButtons', function() {
     fireChromeEvent('sleep-button-release');
 
     assert.isTrue(stubDispatchEvent.calledOnce);
+<<<<<<< HEAD
     assert.isTrue(stubDispatchEvent.calledWith({ type: 'holdsleep' }));
+=======
+    assert.isTrue(stubDispatchEvent.calledWith({ type: 'holdsleep',
+                                                 bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
     assert.isTrue(stubClearTimeout.calledOnce);
     assert.equal(stubClearTimeout.getCall(0).args[0],
       stubSetTimeout.getCall(0).returnValue);
@@ -314,9 +383,17 @@ suite('system/HardwareButtons', function() {
 
     assert.isTrue(stubDispatchEvent.calledTwice);
     assert.isTrue(
+<<<<<<< HEAD
       stubDispatchEvent.getCall(0).calledWith({ type: 'wake' }));
     assert.isTrue(
       stubDispatchEvent.getCall(1).calledWith({ type: 'holdsleep' }));
+=======
+      stubDispatchEvent.getCall(0).calledWith({ type: 'wake',
+                                                bubbles: false }));
+    assert.isTrue(
+      stubDispatchEvent.getCall(1).calledWith({ type: 'holdsleep',
+                                                bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
     assert.isTrue(stubClearTimeout.calledOnce);
     assert.equal(stubClearTimeout.getCall(0).args[0],
       stubSetTimeout.getCall(0).returnValue);
@@ -332,7 +409,12 @@ suite('system/HardwareButtons', function() {
     fireChromeEvent('volume-up-button-release');
 
     assert.isTrue(stubDispatchEvent.calledOnce);
+<<<<<<< HEAD
     assert.isTrue(stubDispatchEvent.calledWith({ type: 'volumeup' }));
+=======
+    assert.isTrue(stubDispatchEvent.calledWith({ type: 'volumeup',
+                                                 bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
     assert.isTrue(stubSetTimeout.calledOnce);
     assert.equal(stubSetTimeout.getCall(0).args[1],
       hardwareButtons.REPEAT_DELAY);
@@ -352,7 +434,12 @@ suite('system/HardwareButtons', function() {
     fireChromeEvent('volume-up-button-release');
 
     assert.isTrue(stubDispatchEvent.calledOnce);
+<<<<<<< HEAD
     assert.isTrue(stubDispatchEvent.calledWith({ type: 'volumeup' }));
+=======
+    assert.isTrue(stubDispatchEvent.calledWith({ type: 'volumeup',
+                                                 bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
     assert.isTrue(stubSetTimeout.calledOnce);
     assert.equal(stubSetTimeout.getCall(0).args[1],
       hardwareButtons.REPEAT_DELAY);
@@ -376,7 +463,12 @@ suite('system/HardwareButtons', function() {
 
     assert.isTrue(stubDispatchEvent.calledOnce);
     assert.isTrue(
+<<<<<<< HEAD
       stubDispatchEvent.getCall(0).calledWith({ type: 'volumeup' }));
+=======
+      stubDispatchEvent.getCall(0).calledWith({ type: 'volumeup',
+                                                bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
 
     assert.isTrue(stubSetTimeout.calledTwice);
     assert.equal(stubSetTimeout.getCall(1).args[1],
@@ -387,7 +479,12 @@ suite('system/HardwareButtons', function() {
 
     assert.isTrue(stubDispatchEvent.calledTwice);
     assert.isTrue(
+<<<<<<< HEAD
       stubDispatchEvent.getCall(1).calledWith({ type: 'volumeup' }));
+=======
+      stubDispatchEvent.getCall(1).calledWith({ type: 'volumeup',
+                                                bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
     assert.isTrue(stubClearTimeout.calledOnce);
     assert.equal(stubClearTimeout.getCall(0).args[0],
       stubSetTimeout.getCall(0).returnValue);
@@ -409,7 +506,12 @@ suite('system/HardwareButtons', function() {
 
     assert.isTrue(stubDispatchEvent.calledOnce);
     assert.isTrue(
+<<<<<<< HEAD
       stubDispatchEvent.getCall(0).calledWith({ type: 'volumeup' }));
+=======
+      stubDispatchEvent.getCall(0).calledWith({ type: 'volumeup',
+                                                bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
 
     assert.isTrue(stubSetTimeout.calledTwice);
     assert.equal(stubSetTimeout.getCall(1).args[1],
@@ -420,7 +522,12 @@ suite('system/HardwareButtons', function() {
 
     assert.isTrue(stubDispatchEvent.calledTwice);
     assert.isTrue(
+<<<<<<< HEAD
       stubDispatchEvent.getCall(1).calledWith({ type: 'volumeup' }));
+=======
+      stubDispatchEvent.getCall(1).calledWith({ type: 'volumeup',
+                                                bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
     assert.isTrue(stubClearTimeout.calledOnce);
     assert.equal(stubClearTimeout.getCall(0).args[0],
       stubSetTimeout.getCall(0).returnValue);
@@ -436,7 +543,12 @@ suite('system/HardwareButtons', function() {
     fireChromeEvent('volume-down-button-release');
 
     assert.isTrue(stubDispatchEvent.calledOnce);
+<<<<<<< HEAD
     assert.isTrue(stubDispatchEvent.calledWith({ type: 'volumedown' }));
+=======
+    assert.isTrue(stubDispatchEvent.calledWith({ type: 'volumedown',
+                                                  bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
     assert.isTrue(stubSetTimeout.calledOnce);
     assert.equal(stubSetTimeout.getCall(0).args[1],
       hardwareButtons.REPEAT_DELAY);
@@ -456,7 +568,12 @@ suite('system/HardwareButtons', function() {
     fireChromeEvent('volume-down-button-release');
 
     assert.isTrue(stubDispatchEvent.calledOnce);
+<<<<<<< HEAD
     assert.isTrue(stubDispatchEvent.calledWith({ type: 'volumedown' }));
+=======
+    assert.isTrue(stubDispatchEvent.calledWith({ type: 'volumedown',
+                                                 bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
     assert.isTrue(stubSetTimeout.calledOnce);
     assert.equal(stubSetTimeout.getCall(0).args[1],
       hardwareButtons.REPEAT_DELAY);
@@ -480,7 +597,12 @@ suite('system/HardwareButtons', function() {
 
     assert.isTrue(stubDispatchEvent.calledOnce);
     assert.isTrue(
+<<<<<<< HEAD
       stubDispatchEvent.getCall(0).calledWith({ type: 'volumedown' }));
+=======
+      stubDispatchEvent.getCall(0).calledWith({ type: 'volumedown',
+                                                bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
 
     assert.isTrue(stubSetTimeout.calledTwice);
     assert.equal(stubSetTimeout.getCall(1).args[1],
@@ -491,7 +613,12 @@ suite('system/HardwareButtons', function() {
 
     assert.isTrue(stubDispatchEvent.calledTwice);
     assert.isTrue(
+<<<<<<< HEAD
       stubDispatchEvent.getCall(1).calledWith({ type: 'volumedown' }));
+=======
+      stubDispatchEvent.getCall(1).calledWith({ type: 'volumedown',
+                                                bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
     assert.isTrue(stubClearTimeout.calledOnce);
     assert.equal(stubClearTimeout.getCall(0).args[0],
       stubSetTimeout.getCall(0).returnValue);
@@ -513,7 +640,12 @@ suite('system/HardwareButtons', function() {
 
     assert.isTrue(stubDispatchEvent.calledOnce);
     assert.isTrue(
+<<<<<<< HEAD
       stubDispatchEvent.getCall(0).calledWith({ type: 'volumedown' }));
+=======
+      stubDispatchEvent.getCall(0).calledWith({ type: 'volumedown',
+                                                bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
 
     assert.isTrue(stubSetTimeout.calledTwice);
     assert.equal(stubSetTimeout.getCall(1).args[1],
@@ -524,7 +656,12 @@ suite('system/HardwareButtons', function() {
 
     assert.isTrue(stubDispatchEvent.calledTwice);
     assert.isTrue(
+<<<<<<< HEAD
       stubDispatchEvent.getCall(1).calledWith({ type: 'volumedown' }));
+=======
+      stubDispatchEvent.getCall(1).calledWith({ type: 'volumedown',
+                                                bubbles: false }));
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
     assert.isTrue(stubClearTimeout.calledOnce);
     assert.equal(stubClearTimeout.getCall(0).args[0],
       stubSetTimeout.getCall(0).returnValue);

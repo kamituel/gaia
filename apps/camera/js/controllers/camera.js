@@ -46,7 +46,6 @@ CameraController.prototype.bindEvents = function() {
   camera.on('configured', this.app.setter('capabilities'));
   camera.on('configured', app.firer('camera:configured'));
   camera.on('change:recording', app.setter('recording'));
-  camera.on('loading', app.firer('camera:loading'));
   camera.on('shutter', app.firer('camera:shutter'));
   camera.on('loaded', app.firer('camera:loaded'));
   camera.on('ready', app.firer('camera:ready'));
@@ -64,7 +63,8 @@ CameraController.prototype.bindEvents = function() {
   app.on('blur', this.teardownCamera);
   app.on('settings:configured', this.onSettingsConfigured);
   app.settings.on('change:pictureSizes', this.camera.setPictureSize);
-  app.settings.on('change:flashModes', this.setFlashMode);
+  app.settings.on('change:pictureFlashModes', this.setFlashMode);
+  app.settings.on('change:videoFlashModes', this.setFlashMode);
   app.settings.on('change:cameras', this.loadCamera);
   app.settings.on('change:mode', this.setMode);
   debug('events bound');
@@ -86,6 +86,12 @@ CameraController.prototype.configure = function() {
   // cameraList data given by the camera hardware
   settings.get('cameras').configureOptions(camera.cameraList);
 
+  // Give the camera a way to create video filepaths. This
+  // is so that the camera can record videos directly to
+  // the final location without us having to move the video
+  // file from temporary, to final location at recording end.
+  this.camera.createVideoFilepath = this.storage.createVideoFilepath;
+
   // This is set so that the video recorder can
   // automatically stop when video size limit is reached.
   camera.set('maxFileSizeBytes', activity.data.maxFileSizeBytes);
@@ -95,15 +101,17 @@ CameraController.prototype.configure = function() {
 };
 
 CameraController.prototype.onSettingsConfigured = function() {
-  var recorderProfile = this.app.settings.recorderProfiles.selected().key;
-  this.camera.setPictureSize(this.app.settings.value('pictureSizes'));
-  this.camera.setVideoProfile(recorderProfile);
-  this.camera.setFlashMode(this.app.settings.value('flashModes'));
-  debug('camera configured with final settings');
+  debug('configuing camera with final settings');
 
-  // TODO: Move to a new StorageController (or App?)
+  var recorderProfile = this.app.settings.recorderProfiles.selected().key;
   var pictureSize = this.app.settings.pictureSizes.value();
   var maxFileSize = (pictureSize.width * pictureSize.height * 4) + 4096;
+
+  this.camera.setVideoProfile(recorderProfile);
+  this.camera.setPictureSize(pictureSize);
+  this.setFlashMode();
+
+  // TODO: Move to a new StorageController (or App?)
   this.storage.setMaxFileSize(maxFileSize);
 };
 
@@ -144,52 +152,66 @@ CameraController.prototype.onCapture = function() {
 CameraController.prototype.onNewImage = function(image) {
   var filmstrip = this.filmstrip;
   var storage = this.storage;
-  var blob = image.blob;
+  var memoryBlob = image.blob;
   var self = this;
 
-  // In either case, save
-  // the photo to device storage
-  storage.addImage(blob, function(filepath) {
-    debug('stored image', filepath);
-    if (!self.activity.active) {
-      filmstrip.addImageAndShow(filepath, blob);
-    }
-  });
+  // In either case, save the memory-backed photo blob to
+  // device storage, retrieve the resulting File (blob) and
+  // pass that around instead of the original memory blob.
+  // This is critical for "pick" activity consumers where
+  // the memory-backed Blob is either highly inefficent or
+  // will almost-immediately become inaccesible, depending
+  // on the state of the platform. https://bugzil.la/982779
+  storage.addImage(
+    memoryBlob,
+    function(filepath, abspath, fileBlob) {
+      debug('stored image', filepath);
+      image.blob = fileBlob;
+      if (!self.activity.active) {
+        filmstrip.addImageAndShow(filepath, fileBlob);
+      }
 
-  debug('new image', image);
-  this.app.emit('newimage', image);
+      debug('new image', image);
+      this.app.emit('newimage', image);
+    }.bind(this));
 };
 
+/**
+ * Store the poster image,
+ * then emit the app 'newvideo'
+ * event. This signifies the video
+ * fully ready.
+ *
+ * We don't store the video blob like
+ * we do for images, as it is recorded
+ * directly to the final location.
+ * This is for memory reason.
+ *
+ * @param  {Object} video
+ */
 CameraController.prototype.onNewVideo = function(video) {
   debug('new video', video);
 
   var storage = this.storage;
   var poster = video.poster;
-  var camera = this.camera;
-  var tmpBlob = video.blob;
-  var app = this.app;
 
   // Add the video to the filmstrip,
   // then save lazily so as not to block UI
   if (!this.activity.active) {
     this.filmstrip.addVideoAndShow(video);
   }
-  storage.addVideo(tmpBlob, function(blob, filepath) {
-    debug('stored video', filepath);
-    video.filepath = filepath;
-    video.blob = blob;
 
-    // Add the poster image to the image storage
-    poster.filepath = video.filepath.replace('.3gp', '.jpg');
-    storage.addImage(poster.blob, { filepath: poster.filepath });
-
-    // Now we have stored the blob
-    // we can delete the temporary one.
-    // NOTE: If we could 'move' the temp
-    // file it would be a lot better.
-    camera.deleteTmpVideoFile();
-    app.emit('newvideo', video);
-  });
+  // Add the poster image to the image storage
+  poster.filepath = video.filepath.replace('.3gp', '.jpg');
+  storage.addImage(
+    poster.blob, { filepath: poster.filepath },
+    function(path, absolutePath, fileBlob) {
+      // Replace the memory-backed Blob with the DeviceStorage file-backed File.
+      // Note that "video" references "poster", so video previews will use this
+      // File.
+      poster.blob = fileBlob;
+      this.app.emit('newvideo', video);
+    }.bind(this));
 };
 
 CameraController.prototype.onFileSizeLimitReached = function() {
@@ -208,15 +230,8 @@ CameraController.prototype.showSizeLimitAlert = function() {
 };
 
 CameraController.prototype.setMode = function(mode) {
-  var flashMode = this.app.settings.value('flashMode');
-  var self = this;
-  // We need to force a flash change so that
-  // the camera hardware gets set with the
-  // correct flash for this capture mode.
-  this.setFlashMode(flashMode);
-  this.viewfinder.fadeOut(function() {
-    self.camera.setMode(mode);
-  });
+  this.camera.setMode(mode);
+  this.setFlashMode();
 };
 
 CameraController.prototype.loadCamera = function(value) {
@@ -224,41 +239,14 @@ CameraController.prototype.loadCamera = function(value) {
   this.viewfinder.fadeOut(this.camera.load);
 };
 
-/**
- * Toggles the flash on
- * the camera and UI when
- * the flash button is pressed.
- */
-CameraController.prototype.setFlashMode = function(flashMode) {
-  flashMode = this.translateFlashMode(flashMode);
-  this.camera.setFlashMode(flashMode);
+CameraController.prototype.setFlashMode = function() {
+  var flashSetting = this.getFlashSetting();
+  this.camera.setFlashMode(flashSetting.value());
 };
 
-/**
- * This is a quick fix to translate
- * the chosen flash mode into a video
- * compatible flash mode.
- *
- * The reason being, camera will soon
- * be dual shutter and both camera
- * and video will support the same
- * flash options. We don't want to
- * waste time building support for
- * deprecated functionality.
- *
- * @param  {String} flashMode
- * @return {String}
- */
-CameraController.prototype.translateFlashMode = function(flashMode) {
-  var isFrontCamera = this.app.get('selectedCamera') === 1;
-  var isPhotoMode = this.app.settings.value('mode') === 'picture';
-  if (isPhotoMode) { return flashMode; }
-  if (isFrontCamera) { return null; }
-  switch (flashMode) {
-    case 'auto': return 'off';
-    case 'on': return 'torch';
-    default: return flashMode;
-  }
+CameraController.prototype.getFlashSetting = function() {
+  var mode = this.app.settings.mode.value();
+  return this.app.settings.get(mode + 'FlashModes');
 };
 
 });

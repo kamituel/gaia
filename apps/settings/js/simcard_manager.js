@@ -1,15 +1,11 @@
 /* exported SimCardManager */
 /* global Template, SimUIModel,
    SimSettingsHelper, MobileOperator, SimCardManager,
-   AirplaneModeHelper */
+   AirplaneModeHelper, localize */
 
 'use strict';
 
 (function(exports) {
-
-  // track used constants here
-  const EMPTY_OPTION_TEXT = '--';
-  const EMPTY_OPTION_VALUE = '-1';
 
   var _ = window.navigator.mozL10n.get;
 
@@ -66,7 +62,7 @@
 
       // it means users is seleting '--' options
       // when simcards are all disabled
-      if (cardIndex == EMPTY_OPTION_VALUE) {
+      if (cardIndex == SimSettingsHelper.EMPTY_OPTION_VALUE) {
         return;
       }
 
@@ -260,8 +256,8 @@
         option.text = simcardInfo.name;
 
         if (simcardInfo.absent) {
-          option.value = EMPTY_OPTION_VALUE;
-          option.text = EMPTY_OPTION_TEXT;
+          option.value = SimSettingsHelper.EMPTY_OPTION_VALUE;
+          option.text = SimSettingsHelper.EMPTY_OPTION_TEXT;
         }
 
         if (index == selectedCardIndex) {
@@ -270,6 +266,18 @@
 
         selectDOM.add(option);
       });
+
+      // we will add `always ask` option these two select
+      if (storageKey === 'outgoingCall' || storageKey === 'outgoingMessages') {
+        var option = document.createElement('option');
+        option.value = SimSettingsHelper.ALWAYS_ASK_OPTION_VALUE;
+        localize(option, 'sim-manager-always-ask');
+
+        if (SimSettingsHelper.ALWAYS_ASK_OPTION_VALUE == selectedCardIndex) {
+          option.selected = true;
+        }
+        selectDOM.add(option);
+      }
     },
     isSimCardLocked: function(cardState) {
 

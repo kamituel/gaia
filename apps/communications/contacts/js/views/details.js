@@ -16,7 +16,7 @@ contacts.Details = (function() {
       star,
       detailsName,
       orgTitle,
-      birthdayTemplate,
+      datesTemplate,
       phonesTemplate,
       emailsTemplate,
       addressesTemplate,
@@ -48,7 +48,7 @@ contacts.Details = (function() {
     listContainer = dom.querySelector('#details-list');
     detailsName = dom.querySelector('#contact-name-title');
     orgTitle = dom.querySelector('#org-title');
-    birthdayTemplate = dom.querySelector('#birthday-template-\\#i\\#');
+    datesTemplate = dom.querySelector('#dates-template-\\#i\\#');
     phonesTemplate = dom.querySelector('#phone-details-template-\\#i\\#');
     emailsTemplate = dom.querySelector('#email-details-template-\\#i\\#');
     addressesTemplate = dom.querySelector('#address-details-template-\\#i\\#');
@@ -89,7 +89,7 @@ contacts.Details = (function() {
   };
 
   var showEditContact = function showEditContact() {
-    Contacts.showForm(true);
+    Contacts.showForm(true, contactData);
   };
 
   var setContact = function cd_setContact(currentContact) {
@@ -185,7 +185,6 @@ contacts.Details = (function() {
   // Method that generates HTML markup for the contact
   //
   var doReloadContactDetails = function doReloadContactDetails(contact) {
-
     detailsName.textContent = contact.name;
     contactDetails.classList.remove('no-photo');
     contactDetails.classList.remove('fb-contact');
@@ -194,11 +193,13 @@ contacts.Details = (function() {
 
     renderFavorite(contact);
     renderOrg(contact);
-    renderBday(contact);
 
     renderPhones(contact);
     renderEmails(contact);
     renderAddresses(contact);
+
+    renderDates(contact);
+
     renderNotes(contact);
     if (fb.isEnabled) {
       renderSocial(contact);
@@ -288,29 +289,38 @@ contacts.Details = (function() {
     }
   };
 
-  var renderBday = function cd_renderBday(contact) {
-    if (!contact.bday) {
+  var renderDates = function cd_renderDates(contact) {
+    if (!contact.bday && !contact.anniversary) {
       return;
     }
 
     var f = new navigator.mozL10n.DateTimeFormat();
-    var birthdayFormat = _('birthdayDateFormat') || '%e %B';
-    var birthdayString = '';
-    try {
-      var offset = contact.bday.getTimezoneOffset() * 60 * 1000;
-      var normalizeBirthdayDate = new Date(contact.bday.getTime() + offset);
-      birthdayString = f.localeFormat(normalizeBirthdayDate, birthdayFormat);
-    } catch (err) {
-      console.error('Error parsing birthday');
-      return;
+    var dateFormat = _('dateFormat') || '%e %B';
+    var dateString = '';
+
+    var fields = ['bday', 'anniversary'];
+    var l10nIds = ['birthday', 'anniversary'];
+
+    var rendered = 0;
+    for (var j = 0; j < fields.length; j++) {
+      var value = contact[fields[j]];
+      if (!value) {
+        continue;
+      }
+      try {
+        dateString = utils.misc.formatDate(value);
+      } catch (err) {
+        console.error('Error parsing date');
+        continue;
+      }
+      var element = utils.templates.render(datesTemplate, {
+        i: ++rendered,
+        date: dateString,
+        type: _(l10nIds[j])
+      });
+
+      listContainer.appendChild(element);
     }
-
-    var element = utils.templates.render(birthdayTemplate, {
-      i: contact.id,
-      bday: birthdayString
-    });
-
-    listContainer.appendChild(element);
   };
 
   var renderSocial = function cd_renderSocial(contact) {
@@ -413,20 +423,58 @@ contacts.Details = (function() {
 
       var callOrPickButton = template.querySelector('#call-or-pick-' + tel);
       callOrPickButton.dataset['tel'] = telField.value;
-      callOrPickButton.addEventListener('click', onCallOrPickClicked);
+      setupPhoneButtonListener(callOrPickButton, telField.value);
 
       listContainer.appendChild(template);
     }
   };
 
+  // Check current situation and setup different listener for the button
+  function setupPhoneButtonListener(button, number) {
+    LazyLoader.load(['/dialer/js/mmi.js'], function() {
+      if (ActivityHandler.currentlyHandling &&
+        ActivityHandler.activityName !== 'open') {
+        button.addEventListener('click', onPickNumber);
+      } else if ((navigator.mozMobileConnection ||
+          window.navigator.mozMobileConnections &&
+          window.navigator.mozMobileConnections[0]) &&
+          MmiManager.isMMI(number)) {
+        button.addEventListener('click', onMMICode);
+      } else if (navigator.mozTelephony) {
+        LazyLoader.load(['/shared/js/multi_sim_action_button.js'], function() {
+          new MultiSimActionButton(button, TelephonyHelper.call,
+                                   'ril.telephony.defaultServiceId',
+                                   function() {return number});
+        });
+      }
+    });
+  }
+
+  // If we are currently handing an activity, send the phone
+  // number as result of clicking in the phone button.
+  function onPickNumber(evt) {
+    var number = evt.target.dataset['tel'];
+    ActivityHandler.postPickSuccess({ number: number });
+  }
+
+  // If the phone number stored in a contact is a MMI code,
+  // launch the dialer with that specific code.
+  function onMMICode(evt) {
+    var number = evt.target.dataset['tel'];
+    // For security reasons we cannot directly call MmiManager.send(). We
+    // need to show the MMI number in the dialer instead.
+    new MozActivity({
+      name: 'dial',
+      data: {
+        type: 'webtelephony/number',
+        number: number
+      }
+    });
+  }
+
   var onSendSmsClicked = function onSendSmsClicked(evt) {
     var tel = evt.target.dataset['tel'];
     Contacts.sendSms(tel);
-  };
-
-  var onCallOrPickClicked = function onCallOrPickClicked(evt) {
-    var tel = evt.target.dataset['tel'];
-    Contacts.callOrPick(tel);
   };
 
   var renderEmails = function cd_renderEmails(contact) {

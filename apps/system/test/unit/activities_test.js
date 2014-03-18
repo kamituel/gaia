@@ -16,6 +16,11 @@ var mocksForActivities = new MocksHelper([
 suite('system/Activities', function() {
   var realL10n;
   var subject;
+<<<<<<< HEAD
+=======
+  var stubById;
+  var fakeElement;
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
 
   var fakeLaunchConfig1 = {
     'isActivity': false,
@@ -41,11 +46,24 @@ suite('system/Activities', function() {
 
   setup(function() {
     this.sinon.useFakeTimers();
+<<<<<<< HEAD
+=======
+
+    fakeElement = document.createElement('div');
+    fakeElement.style.cssText = 'height: 100px; display: block;';
+    stubById = this.sinon.stub(document, 'getElementById')
+                          .returns(fakeElement.cloneNode(true));
+
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
     subject = new Activities();
   });
 
   teardown(function() {
     this.sinon.clock.restore();
+<<<<<<< HEAD
+=======
+    stubById.restore();
+>>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
   });
 
   suite('constructor', function() {

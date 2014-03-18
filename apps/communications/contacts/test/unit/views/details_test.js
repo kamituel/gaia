@@ -1,8 +1,14 @@
+'use strict';
+
 //Avoiding lint checking the DOM file renaming it to .html
 requireApp('communications/contacts/test/unit/mock_details_dom.js.html');
 
 require('/shared/js/text_normalizer.js');
 require('/shared/test/unit/mocks/mock_contact_all_fields.js');
+require('/shared/test/unit/mocks/mock_lazy_loader.js');
+require('/shared/test/unit/mocks/mock_multi_sim_action_button.js');
+require('/dialer/test/unit/mock_mmi_manager.js');
+require('/dialer/test/unit/mock_telephony_helper.js');
 
 requireApp('communications/contacts/js/views/details.js');
 requireApp('communications/contacts/js/utilities/event_listeners.js');
@@ -13,6 +19,7 @@ requireApp('communications/contacts/test/unit/mock_contacts.js');
 requireApp('communications/contacts/test/unit/mock_contacts_list_obj.js');
 requireApp('communications/contacts/test/unit/mock_fb.js');
 requireApp('communications/contacts/test/unit/mock_extfb.js');
+requireApp('communications/contacts/test/unit/mock_activities.js');
 
 require('/shared/test/unit/mocks/mock_contact_photo_helper.js');
 
@@ -20,13 +27,14 @@ var subject,
     container,
     realL10n,
     realOnLine,
+    realMisc,
+    realActivityHandler,
     dom,
     contact,
     contactDetails,
     listContainer,
     detailsName,
     orgTitle,
-    birthdayTemplate,
     phonesTemplate,
     emailsTemplate,
     addressesTemplate,
@@ -50,8 +58,16 @@ var subject,
 
 var SCALE_RATIO = 1;
 
+if (!this.ActivityHandler) {
+  this.ActivityHandler = null;
+}
+
 var mocksHelperForDetailView = new MocksHelper([
-  'ContactPhotoHelper'
+  'ContactPhotoHelper',
+  'LazyLoader',
+  'MmiManager',
+  'MultiSimActionButton',
+  'TelephonyHelper'
 ]).init();
 
 suite('Render contact', function() {
@@ -69,6 +85,7 @@ suite('Render contact', function() {
   suiteSetup(function() {
     realOnLine = Object.getOwnPropertyDescriptor(navigator, 'onLine');
     realL10n = navigator.mozL10n;
+    realActivityHandler = window.ActivityHandler;
     navigator.mozL10n = {
       get: function get(key) {
         return key;
@@ -77,8 +94,22 @@ suite('Render contact', function() {
         this.localeFormat = function(date, format) {
           return date;
         };
+      },
+      translate: function() {
+
       }
     };
+
+    realMisc = utils.misc;
+    utils.misc = {
+      formatDate: function(date) {
+        var offset = date.getTimezoneOffset() * 60 * 1000;
+        var normalizedDate = new Date(date.getTime() + offset);
+        return normalizedDate.toString();
+      }
+    };
+
+    window.ActivityHandler = MockActivities;
 
     Object.defineProperty(navigator, 'onLine', {
       configurable: true,
@@ -103,7 +134,6 @@ suite('Render contact', function() {
     listContainer = dom.querySelector('#details-list');
     detailsName = dom.querySelector('#contact-name-title');
     orgTitle = dom.querySelector('#org-title');
-    birthdayTemplate = dom.querySelector('#birthday-template-\\#i\\#');
     phonesTemplate = dom.querySelector('#phone-details-template-\\#i\\#');
     emailsTemplate = dom.querySelector('#email-details-template-\\#i\\#');
     addressesTemplate = dom.querySelector('#address-details-template-\\#i\\#');
@@ -132,6 +162,8 @@ suite('Render contact', function() {
     if (realOnLine) {
       Object.defineProperty(navigator, 'onLine', realOnLine);
     }
+    utils.misc = realMisc;
+    window.ActivityHandler = realActivityHandler;
   });
 
   setup(function() {
@@ -187,26 +219,6 @@ suite('Render contact', function() {
       subject.render(null, TAG_OPTIONS);
       assert.equal('', orgTitle.textContent);
       assert.equal(true, orgTitle.classList.contains('hide'));
-    });
-  });
-
-  suite('Render bday', function() {
-    test('with bday', function() {
-      subject.render(null, TAG_OPTIONS);
-      var bdayBlock = container.querySelector('#birthday-template-1');
-      assert.isNotNull(bdayBlock);
-      // Ensuring timezone correctly treated (Bug 880775)
-      var offset = mockContact.bday.getTimezoneOffset() * 60 * 1000;
-      var targetDate = new Date(mockContact.bday.getTime() + offset);
-      assert.equal(bdayBlock.querySelector('strong').textContent,
-                   targetDate.toString());
-    });
-    test('without bday', function() {
-      var contactWoBday = new MockContactAllFields(true);
-      contactWoBday.bday = null;
-      subject.setContact(contactWoBday);
-      subject.render(null, TAG_OPTIONS);
-      assert.equal(-1, container.innerHTML.indexOf('birthday'));
     });
   });
 
@@ -492,6 +504,62 @@ suite('Render contact', function() {
       assert.equal(-1, toCheck.indexOf('address-details-template-2'));
     });
   });
+
+  suite('Render dates', function() {
+
+    function assertRenderedDate(date, dateBlock) {
+      var offset = date.getTimezoneOffset() * 60 * 1000;
+      var targetDate = new Date(date.getTime() + offset);
+      assert.equal(dateBlock.querySelector('strong').textContent,
+                   targetDate.toString());
+    }
+
+    test('with bday', function() {
+      subject.render(null, TAG_OPTIONS);
+      var bdayBlock = container.querySelector('#dates-template-1');
+      assert.isNotNull(bdayBlock);
+      // Ensuring timezone correctly treated (Bug 880775)
+      assertRenderedDate(mockContact.bday, bdayBlock);
+    });
+
+    test('with anniversary', function() {
+      var contactWithAnn = new MockContactAllFields(true);
+      contactWithAnn.bday = null;
+      contactWithAnn.anniversary = new Date(0);
+      subject.setContact(contactWithAnn);
+      subject.render(null, TAG_OPTIONS);
+
+      var dateBlock = container.querySelector('#dates-template-1');
+      assert.isNotNull(dateBlock);
+      assertRenderedDate(contactWithAnn.anniversary, dateBlock);
+    });
+
+    test('with bday and anniversary', function() {
+      var contactWithAll = new MockContactAllFields(true);
+      contactWithAll.anniversary = new Date(0);
+      subject.setContact(contactWithAll);
+      subject.render(null, TAG_OPTIONS);
+
+      var fields = ['bday', 'anniversary'];
+
+      for (var j = 0; j < fields.length; j++) {
+        var dateBlock = container.querySelector('#dates-template-' + (j + 1));
+        assert.isNotNull(dateBlock);
+        assertRenderedDate(contactWithAll[fields[j]], dateBlock);
+      }
+    });
+
+    test('without dates', function() {
+      var contactWoDates = new MockContactAllFields(true);
+      contactWoDates.bday = null;
+      contactWoDates.anniversary = null;
+
+      subject.setContact(contactWoDates);
+      subject.render(null, TAG_OPTIONS);
+      assert.equal(-1, container.innerHTML.indexOf('dates'));
+    });
+  });
+
   suite('Render notes', function() {
     test('with 1 note', function() {
       subject.render(null, TAG_OPTIONS);
@@ -518,11 +586,8 @@ suite('Render contact', function() {
 
     test('with more than 1 note', function() {
       var contactMultNote = new MockContactAllFields(true);
-      contactMultNote.note[1] = contactMultNote.note[0];
-      for (var elem in contactMultNote.note[1]) {
-        var currentElem = contactMultNote.note[1][elem] + 'dup';
-        contactMultNote.note[1][elem] = currentElem;
-      }
+      contactMultNote.note[1] = new String(contactMultNote.note[0]);
+
       subject.setContact(contactMultNote);
       subject.render(null, TAG_OPTIONS);
       assert.include(container.innerHTML, 'note-details-template-0');
@@ -623,6 +688,94 @@ suite('Render contact', function() {
       });
 
       subject.render(null, TAG_OPTIONS);
+    });
+  });
+
+  suite('> User actions', function() {
+    var realMozTelephony;
+    var realMozMobileConnection;
+    suiteSetup(function() {
+      realMozTelephony = navigator.mozTelephony;
+      realMozMobileConnection = navigator.mozMobileConnection;
+      navigator.mozTelephony = true;
+      navigator.mozMobileConnection = true;
+    });
+
+    suiteTeardown(function() {
+      navigator.mozTelephony = realMozTelephony;
+      navigator.mozMobileConnection = realMozMobileConnection;
+    });
+
+    setup(function() {
+      this.sinon.spy(LazyLoader, 'load');
+    });
+
+    teardown(function() {
+      LazyLoader.load.reset();
+    });
+
+    test(' > Not loading MultiSimActionButton when we are on an activity',
+         function() {
+      this.sinon.stub(MmiManager, 'isMMI').returns(true);
+      MockActivities.currentlyHandling = true;
+      subject.render(null, TAG_OPTIONS);
+
+      sinon.assert.notCalled(MmiManager.isMMI);
+      sinon.assert.neverCalledWith(LazyLoader.load,
+       ['/shared/js/multi_sim_action_button.js']);
+      MockActivities.currentlyHandling = false;
+    });
+
+    test('> Not loading MultiSimActionButton if we have a MMI code',
+         function() {
+      this.sinon.stub(MmiManager, 'isMMI').returns(true);
+
+      subject.render(null, TAG_OPTIONS);
+
+      sinon.assert.called(MmiManager.isMMI);
+      sinon.assert.neverCalledWith(LazyLoader.load,
+       ['/shared/js/multi_sim_action_button.js']);
+    });
+
+    test('> Load call button', function() {
+      this.sinon.stub(MmiManager, 'isMMI').returns(false);
+      subject.render(null, TAG_OPTIONS);
+
+      // We have two buttons, 2 calls per button created
+      assert.equal(LazyLoader.load.callCount, 4);
+      var spyCall = LazyLoader.load.getCall(1);
+      assert.deepEqual(
+        ['/shared/js/multi_sim_action_button.js'], spyCall.args[0]);
+    });
+
+    test('> Multiple MultiSimActionButtons initialized with correct values',
+         function() {
+      var theContact = new MockContactAllFields(true);
+      subject.setContact(theContact);
+      this.sinon.stub(MmiManager, 'isMMI').returns(false);
+      this.sinon.spy(window, 'MultiSimActionButton');
+
+      subject.render(null, TAG_OPTIONS);
+
+      var phone1 = container.querySelector('#call-or-pick-0');
+      var phone2 = container.querySelector('#call-or-pick-1');
+      var phoneNumber1 = theContact.tel[0].value;
+      var phoneNumber2 = theContact.tel[1].value;
+
+      sinon.assert.calledWith(MultiSimActionButton, phone1,
+           TelephonyHelper.call, 'ril.telephony.defaultServiceId',
+           sinon.match.func);
+      // Check the getter contains the correct phone number
+      var getterResult = MultiSimActionButton.args[0][3]();
+      assert.equal(phoneNumber1, getterResult);
+
+      sinon.assert.calledWith(MultiSimActionButton, phone2,
+           TelephonyHelper.call, 'ril.telephony.defaultServiceId',
+           sinon.match.func);
+      // Second call getter result
+      getterResult = MultiSimActionButton.args[1][3]();
+      assert.equal(phoneNumber2, getterResult);
+
     });
   });
 

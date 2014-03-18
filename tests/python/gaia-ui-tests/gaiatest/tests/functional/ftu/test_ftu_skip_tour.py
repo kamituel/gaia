@@ -5,9 +5,10 @@
 import re
 
 from marionette.by import By
+from marionette import Wait
+from marionette.errors import StaleElementException
 
 from gaiatest import GaiaTestCase
-from gaiatest.apps.keyboard.app import Keyboard
 
 
 class TestFtu(GaiaTestCase):
@@ -124,15 +125,12 @@ class TestFtu(GaiaTestCase):
         self.marionette.find_element(*self._next_button_locator).tap()
         self.wait_for_element_displayed(*self._section_wifi_locator)
 
-        # Wait for some networks to be found
-        self.wait_for_condition(
-            lambda m: len(m.find_elements(
-                *self._found_wifi_networks_locator)) > 0,
-            message='No networks listed on screen')
-
+        # Wait for the network to be found
         wifi_network_locator = (By.CSS_SELECTOR, '#networks-list li[data-ssid="%s"]' % self.testvars['wifi']['ssid'])
-        self.wait_for_element_displayed(*wifi_network_locator)
-        self.marionette.find_element(*wifi_network_locator).tap()
+        wifi_network = self.wait_for_element_present(*wifi_network_locator)
+
+        self.marionette.execute_script("arguments[0].scrollIntoView(false);", [wifi_network])
+        wifi_network.tap()
 
         # This is in the event we are using a Wifi Network that requires a password
         # We cannot be sure of this thus need the logic
@@ -142,11 +140,9 @@ class TestFtu(GaiaTestCase):
             password = self.marionette.find_element(*self._password_input_locator)
             password.send_keys(self.testvars['wifi'].get('psk') or self.testvars['wifi'].get('wep'))
 
-            # Wait for Keyboard app init and be displayed
-            self.wait_for_condition(lambda m: Keyboard(m).is_displayed())
             self.marionette.find_element(*self._join_network_locator).tap()
 
-        self.wait_for_condition(
+        Wait(self.marionette, timeout=60, ignored_exceptions=StaleElementException).until(
             lambda m: 'connected' in m.find_element(
                 By.CSS_SELECTOR,
                 '#networks-list li[data-ssid="%s"] aside' %

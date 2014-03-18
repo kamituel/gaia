@@ -1,5 +1,5 @@
 /*global Utils, Template, Threads, ThreadUI, MessageManager, ContactRenderer,
-         Contacts*/
+         Contacts, Settings*/
 /*exported Information */
 
 (function(exports) {
@@ -34,6 +34,12 @@ function completeLocaleFormat(timestamp) {
   return Utils.date.format.localeFormat(new Date(+timestamp),
     navigator.mozL10n.get('report-dateTimeFormat')
   );
+}
+
+function l10nContainsDateSetup(element, timestamp) {
+  element.dataset.l10nDate = timestamp;
+  element.dataset.l10nDateFormat = 'report-dateTimeFormat';
+  element.textContent = completeLocaleFormat(timestamp);
 }
 
 // Generate report Div contains delivery report and read report for showing
@@ -84,6 +90,26 @@ function createReportDiv(reports) {
   }
   reportDiv.innerHTML = TMPL.report.interpolate(data);
   return reportDiv;
+}
+
+function showSimInfo(element, iccId) {
+  var iccManager = navigator.mozIccManager;
+  // Hide the element when single SIM or no iccManager/mobileConnections
+  if (!(Settings.hasSeveralSim() && iccId && iccManager)) {
+    return;
+  }
+
+  var info =[];
+  // TODO: we might need to re-localize Sim name manually when language changes
+  var simId = Settings.getSimNameByIccId(iccId);
+  var operator = Settings.getOperatorByIccId(iccId);
+  var number = iccManager.getIccById(iccId).iccInfo.msisdn;
+  info = [simId, operator, number].filter(function(value){
+    return value;
+  });
+
+  element.querySelector('.sim-detail').textContent = info.join(', ');
+  element.classList.remove('hide');
 }
 
 // Compute attachment size and return the corresponding l10nId(KB/MB) and
@@ -154,9 +180,6 @@ var VIEWS = {
         var type = message.type;
 
         this.subject.textContent = '';
-        this.datetime.dataset.l10nDate = message.timestamp;
-        this.datetime.dataset.l10nDateFormat = 'report-dateTimeFormat';
-        this.datetime.textContent = completeLocaleFormat(message.timestamp);
 
         // Fill in the description/status/size
         if (type === 'sms') {
@@ -182,21 +205,32 @@ var VIEWS = {
         this.status.dataset.type = message.delivery;
         localize(this.status, 'message-status-' + message.delivery);
 
-        // Filled in the contact list. Only outgoing message contains detailed
-        // report information.
+        // Set different layout/value for received and sent message
         if (message.delivery === 'received' ||
             message.delivery === 'not-downloaded') {
+          this.container.classList.add('received');
           localize(this.contactTitle, 'report-from');
+          l10nContainsDateSetup(this.receivedTimeStamp, message.timestamp);
+          l10nContainsDateSetup(this.sentTimeStamp, message.sentTimestamp);
         } else {
+          this.container.classList.remove('received');
           localize(this.contactTitle, 'report-recipients');
+          l10nContainsDateSetup(this.datetime, message.timestamp);
         }
+
+        //show sim information for dual sim device
+        showSimInfo(this.simInfo, message.iccId);
+
+        // Filled in the contact list. Only outgoing message contains detailed
+        // report information.
         this.renderContactList(createListWithMsgInfo(message));
       }).bind(this);
 
       localize(ThreadUI.headerText, 'message-report');
     },
-    elements: ['contact-list', 'description', 'status', 'size', 'size-block',
-      'type', 'subject', 'datetime', 'contact-title']
+    elements: ['contact-list', 'status', 'size', 'size-block', 'sent-detail',
+      'type', 'subject', 'datetime', 'contact-title', 'received-detail',
+      'sent-timeStamp', 'received-timeStamp', 'sim-info']
   }
 };
 

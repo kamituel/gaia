@@ -192,6 +192,11 @@ var isKeyboardRendered = false;
 var currentCandidates = [];
 var candidatePanelScrollTimer = null;
 
+var cachedIMEDimensions = {
+  height: 0,
+  width: 0
+};
+
 // Show accent char menu (if there is one) after ACCENT_CHAR_MENU_TIMEOUT
 const ACCENT_CHAR_MENU_TIMEOUT = 700;
 
@@ -240,8 +245,8 @@ var vibrationEnabled;
 var isSoundEnabled;
 
 // data URL for keyboard click sound
-const CLICK_SOUND = './resources/sounds/key.opus';
-const SPECIAL_SOUND = './resources/sounds/special.opus';
+const CLICK_SOUND = './resources/sounds/key.ogg';
+const SPECIAL_SOUND = './resources/sounds/special.ogg';
 
 // The audio element used to play the click sound
 var clicker;
@@ -873,8 +878,8 @@ function setLayoutPage(newpage) {
 // Inform about a change in the displayed application via mutation observer
 // http://hacks.mozilla.org/2012/05/dom-mutationobserver-reacting-to-dom-changes-without-killing-browser-performance/
 function updateTargetWindowHeight(hide) {
-  var imeHeight = IMERender.ime.scrollHeight;
-  var imeWidth = IMERender.getWidth();
+  var imeHeight = cachedIMEDimensions.height = IMERender.ime.scrollHeight;
+  var imeWidth = cachedIMEDimensions.width = IMERender.getWidth();
   window.resizeTo(imeWidth, imeHeight);
 }
 
@@ -1140,7 +1145,7 @@ function onTouchEnd(evt) {
       var dt = evt.timeStamp - touchStartCoordinate.timeStamp;
       var vy = dy / dt;
 
-      var keyboardHeight = IMERender.ime.scrollHeight;
+      var keyboardHeight = cachedIMEDimensions.height;
       var hasCandidateScrolled = (IMERender.isFullCandidataPanelShown() &&
                                   (Math.abs(dx) > 3 || Math.abs(dy) > 3));
 

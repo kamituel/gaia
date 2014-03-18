@@ -1,15 +1,25 @@
 /* -*- Mode: js; js-indent-level: 2; indent-tabs-mode: nil -*- */
 /* vim: set shiftwidth=2 tabstop=2 autoindent cindent expandtab: */
 
+/* globals ApnHelper */
+
 (function(exports) {
   'use strict';
+
+  // Setting key for the setting holding the OS version.
+  var DEVICE_INFO_OS_KEY = 'deviceinfo.os';
+
+  // Prefix for the persist key.
+  var PERSIST_KEY_PREFIX = 'operatorvariant';
+  // Sufix for the persist key.
+  var PERSIST_KEY_SUFIX = 'customization';
 
   // This json file should always be accessed from the root instead of the
   // current working base URL so that it can work in unit-tests as well
   // as during normal run time.
   var OPERATOR_VARIANT_FILE = '/shared/resources/apn.json';
 
-  var APN_TYPES = ['default', 'mms', 'supl'];
+  var APN_TYPES = ['default', 'mms', 'supl', 'dun', 'ims'];
   var AUTH_TYPES = ['none', 'pap', 'chap', 'papOrChap'];
   var DEFAULT_MMS_SIZE_LIMITATION = 300 * 1024;
 
@@ -18,6 +28,8 @@
    * from the mozMobileConnection.
    */
   function OperatorVariantHandler(iccId, iccCardIndex) {
+    /** Holds the OS version */
+    this._deviceInfoOs = 'unknown';
     /** Index of the ICC card on the mozMobileConnections array */
     this._iccCardIndex = iccCardIndex;
     /** ICC id in the ICC card */
@@ -33,13 +45,32 @@
      * Init function.
      */
     init: function ovh_init() {
+      var settings = window.navigator.mozSettings;
+      var deviceInfoOsGetRequest =
+        settings.createLock().get(DEVICE_INFO_OS_KEY);
+      deviceInfoOsGetRequest.onsuccess = (function onSuccessHandler() {
+        this._deviceInfoOs =
+          deviceInfoOsGetRequest.result[DEVICE_INFO_OS_KEY] || 'unknown';
+
+        this.run();
+      }).bind(this);
+    },
+
+    /**
+     * Run customizations.
+     */
+    run: function ovh_run() {
       // Set some carrier settings on startup and when the SIM card is changed.
       this._operatorVariantHelper =
         new OperatorVariantHelper(
           this._iccId,
           this._iccCardIndex,
           this.applySettings.bind(this),
-          'operatorvariant.customization.' + this._iccId,
+          // Pass the persist key.
+          PERSIST_KEY_PREFIX + '.' +
+          this._deviceInfoOs + '.' +
+          'ICC' + this._iccCardIndex + '.' +
+          PERSIST_KEY_SUFIX,
           true);
 
       // Listen for changes in MCC/MNC values.
@@ -69,19 +100,34 @@
      * card or when the device boots with the same ICC card and the
      * customization has not been applied yet.
      *
-     * @param {String} mcc Mobile Country Code in the ICC card.
-     * @param {String} mnc Mobile Network Code in the ICC card.
+     * @param {String}  mcc Mobile Country Code in the ICC card.
+     * @param {String}  mnc Mobile Network Code in the ICC card.
+     * @param {Boolean} persistKeyNotSet The customization didn't run for
+     *                                   current OS version. Flag.
      */
-    applySettings: function ovh_applySettings(mcc, mnc) {
+    applySettings: function ovh_applySettings(mcc, mnc, persistKeyNotSet) {
       // Save MCC and MNC codes.
       this._iccSettings.mcc = mcc;
       this._iccSettings.mnc = mnc;
-      this.retrieveOperatorVariantSettings(
-        this.applyOperatorVariantSettings.bind(this)
-      );
-      this.retrieveWAPUserAgentProfileSettings(
-        this.applyWAPUAProfileUrl.bind(this)
-      );
+
+      if (!persistKeyNotSet) {
+        this.retrieveOperatorVariantSettings(
+          this.applyOperatorVariantSettings.bind(this)
+        );
+        this.retrieveWAPUserAgentProfileSettings(
+          this.applyWAPUAProfileUrl.bind(this)
+        );
+      } else {
+        this.retrieveOperatorVariantSettings(
+          (function retrieveOperatorVariantSettingsCb(result) {
+            this.filterApnsByMvnoRules(0, result, [], '', '',
+              (function onFinishCb(filteredApnList) {
+                this.buildApnSettings(filteredApnList);
+            }).bind(this));
+            this.applyVoicemailSettings(result, /*isUpdate*/ true);
+          }).bind(this)
+        );
+      }
 
       this._operatorVariantHelper.applied();
     },
@@ -112,9 +158,13 @@
           // *mnc* values!
           var mnc = self.padLeft(self._iccSettings.mnc, 2);
 
-          // get a list of matching APNs
-          var compatibleAPN = apn[mcc] ? (apn[mcc][mnc] || []) : [];
-          callback(compatibleAPN);
+          // Get the type of the data network
+          var networkType = window.navigator
+                                  .mozMobileConnections[self._iccCardIndex]
+                                  .data.type;
+
+          // Get a list of matching APNs
+          callback(ApnHelper.getCompatible(apn, mcc, mnc, networkType));
         }
       };
       xhr.send();
@@ -233,6 +283,24 @@
           'ril.mms.mmsport': 'mmsport',
           'ril.mms.authtype': 'authtype'
         },
+        'dun': {
+          'ril.dun.carrier': 'carrier',
+          'ril.dun.apn': 'apn',
+          'ril.dun.user': 'user',
+          'ril.dun.passwd': 'password',
+          'ril.dun.httpProxyHost': 'proxy',
+          'ril.dun.httpProxyPort': 'port',
+          'ril.dun.authtype': 'authtype'
+        },
+        'ims': {
+          'ril.ims.carrier': 'carrier',
+          'ril.ims.apn': 'apn',
+          'ril.ims.user': 'user',
+          'ril.ims.passwd': 'password',
+          'ril.ims.httpProxyHost': 'proxy',
+          'ril.ims.httpProxyPort': 'port',
+          'ril.ims.authtype': 'authtype'
+        },
         'operatorvariant': {
           'ril.iccInfo.mbdn': 'voicemail',
           'ril.sms.strict7BitEncoding.enabled':
@@ -262,6 +330,9 @@
           var name = apnPrefNames[type][key];
           var item = {};
           switch (name) {
+            case 'voicemail':
+              this.applyVoicemailSettings(result, /*isUpdate*/ false);
+              break;
             // load values from the AUTH_TYPES
             case 'authtype':
               item[key] = apn[name] ? AUTH_TYPES[apn[name]] : 'notDefined';
@@ -280,7 +351,10 @@
               }
               break;
           }
-          transaction.set(item);
+
+          if (Object.keys(item)) {
+            transaction.set(item);
+          }
         }
       }
 
@@ -288,6 +362,62 @@
         (function onFinishCb(filteredApnList) {
           this.buildApnSettings(filteredApnList);
       }).bind(this));
+    },
+
+    /**
+     * Store the voicemail settings into the settings database.
+     *
+     * @param {Array} allSettings Carrier settings.
+     * @param {Boolean} isUpdate Flag. First run after flashing or updating.
+     */
+    applyVoicemailSettings:
+      function ovh_applyVoicemailSettings(allSettings, isUpdate) {
+        var operatorVariantSettings = {};
+        for (var i = 0; i < allSettings.length; i++) {
+          if (allSettings[i] &&
+              allSettings[i].type.indexOf('operatorvariant') != -1) {
+            operatorVariantSettings = allSettings[i];
+            break;
+          }
+        }
+
+        // Load the voicemail number stored in the apn.json database.
+        var number = operatorVariantSettings['voicemail'] || '';
+
+        // Store settings into the database.
+        var settings = window.navigator.mozSettings;
+        var transaction = settings.createLock();
+
+        var request = transaction.get('ril.iccInfo.mbdn');
+        request.onsuccess = (function() {
+          var result = request.result['ril.iccInfo.mbdn'];
+
+          if (!result) {
+            // First boot after flashing the device.
+            result = ['', ''];
+            result[this._iccCardIndex] = number;
+          } else if (!Array.isArray(result)) {
+            // Might be a first boot after a system update.
+            result = ['', ''];
+            if (!isUpdate) {
+              // First boot after flashing the device.
+              result[this._iccCardIndex] = number;
+            } else {
+              // Actually it is a system update. Do not overrite number and keep
+              // it as the voice number for first ICC card.
+              if (result !== number) {
+                result[0] = result;
+              } else {
+                result[0] = number;
+              }
+            }
+          } else {
+            // First boot after a new ICC card is inserted.
+            result[this._iccCardIndex] = number;
+          }
+
+          transaction.set({'ril.iccInfo.mbdn': result});
+        }).bind(this);
     },
 
     /**

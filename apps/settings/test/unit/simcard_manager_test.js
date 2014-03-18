@@ -1,7 +1,8 @@
 /* global mocha, MockL10n, MockTemplate, MockSimUIModel,
    SimUIModel, MockSimSettingsHelper, SimCardManager,
    MockNavigatorMozIccManager, MockNavigatorMozMobileConnections,
-   MockMobileOperator, MockNavigatorSettings, MockAirplaneModeHelper */
+   MockMobileOperator, MockNavigatorSettings, MockAirplaneModeHelper, test,
+   requireApp, suite, suiteTeardown, suiteSetup, setup, assert, sinon */
 'use strict';
 
 requireApp(
@@ -12,11 +13,12 @@ requireApp(
   'settings/shared/test/unit/mocks/mock_navigator_moz_settings.js');
 requireApp(
   'settings/shared/test/unit/mocks/mock_mobile_operator.js');
+requireApp(
+  'settings/shared/test/unit/mocks/mock_sim_settings_helper.js');
 requireApp('settings/test/unit/mock_airplane_mode_helper.js');
 requireApp('settings/test/unit/mock_l10n.js');
 requireApp('settings/test/unit/mock_template.js');
 requireApp('settings/test/unit/mock_simcard_manager_simcard_helper.js');
-requireApp('settings/test/unit/mock_simcard_manager_settings_helper.js');
 
 mocha.globals(['Template', 'SimUIModel', 'SimCardManager',
   'SimSettingsHelper', 'MobileOperator', 'localize', 'AirplaneModeHelper']);
@@ -451,6 +453,36 @@ suite('SimCardManager > ', function() {
       assert.ok(SimCardManager.initSelectOptionsUI.called);
       assert.ok(SimCardManager.updateSimCardsUI.called);
       assert.ok(SimCardManager.updateSimSecurityUI.called);
+    });
+  });
+
+  suite('initSelectOptionUI > ', function() {
+    var selectedIndex = 1;
+    var fakeSelect;
+
+    setup(function() {
+      initCards(2);
+      SimCardManager.simcards[0].absent = false;
+      SimCardManager.simcards[1].absent = false;
+      fakeSelect = document.createElement('select');
+    });
+    test('if storageKey is outgoingCall, we would add "always ask" option',
+      function() {
+        SimCardManager.initSelectOptionUI('outgoingCall',
+          selectedIndex, fakeSelect);
+        assert.equal(fakeSelect.length, 3);
+    });
+    test('if storageKey is outgoingMessages, we would add "always ask" option',
+      function() {
+        SimCardManager.initSelectOptionUI('outgoingMessages',
+          selectedIndex, fakeSelect);
+        assert.equal(fakeSelect.length, 3);
+    });
+    test('if storageKey is outgoingData, we won\'t add "always ask" option',
+      function() {
+        SimCardManager.initSelectOptionUI('outgoingData',
+          selectedIndex, fakeSelect);
+        assert.equal(fakeSelect.length, 2);
     });
   });
 

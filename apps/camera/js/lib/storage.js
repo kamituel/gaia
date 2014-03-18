@@ -25,9 +25,20 @@ function Storage() {
   this.video = navigator.getDeviceStorage('videos');
   this.image = navigator.getDeviceStorage('pictures');
   this.image.addEventListener('change', this.onStorageChange);
+  this.createVideoFilepath = this.createVideoFilepath.bind(this);
   debug('initialized');
 }
 
+/**
+ * Save the image Blob to DeviceStorage then lookup the File reference and
+ * return that in the callback as well as the resulting paths.  You always
+ * want to forget about the Blob you told us about and use the File instead
+ * since otherwise you are wasting precious memory.
+ *
+ * @param {Object} [options]
+ * @param {String} options.filepath
+ *   The path to save the image to.
+ */
 Storage.prototype.addImage = function(blob, options, done) {
   if (typeof options === 'function') {
     done = options;
@@ -52,50 +63,58 @@ Storage.prototype.addImage = function(blob, options, done) {
     var req = self.image.addNamed(blob, filepath);
     req.onerror = function() { self.emit('error'); };
     req.onsuccess = function(e) {
-      var absolutePath = e.target.result;
       debug('image stored', filepath);
-      done(filepath, absolutePath);
+      var absolutePath = e.target.result;
+      // addNamed does not give us a File handle so we need to get() it again.
+      refetchImage(filepath, absolutePath);
+    };
+  }
+
+  function refetchImage(filepath, absolutePath) {
+    var req = self.image.get(filepath);
+    req.onerror = function() { self.emit('error'); };
+    req.onsuccess = function(e) {
+      debug('image file blob handle retrieved');
+      var fileBlob = e.target.result;
+      done(filepath, absolutePath, fileBlob);
     };
   }
 };
 
-Storage.prototype.addVideo = function(blob, done) {
-  debug('adding video');
-  var storage = this.video;
-  var self = this;
-
-  createFilename(this.video, 'video', onCreated);
-
-  function onCreated(filepath) {
-    debug('filename created', filepath);
-    var req = storage.addNamed(blob, filepath);
-    req.onerror = onError;
-    req.onsuccess = onStored;
-
-    function onStored(e) {
-      debug('video stored', e.target.result);
-      var absolutePath = e.target.result;
-      var req = storage.get(filepath);
-      req.onerror = onError;
-      req.onsuccess = onGotBlob;
-
-      function onGotBlob() {
-        var blob = req.result;
-        done(blob, filepath, absolutePath);
-
-        // Healthcheck the storage
-        // *after* the callback, to give
-        // the user chance to delete
-        // the old blob.
-        self.check();
-      }
-    }
-  }
-
-  function onError() {
-    self.emit('error');
-  }
+/**
+ * Create a new video filepath.
+ *
+ * The CameraControl API will not
+ * automatically create directories
+ * for the new file if they do not
+ * exist.
+ *
+ * So we write a dummy file to the
+ * same directory via DeviceStorage
+ * to ensure that the directory exists
+ * before attempting to record to this
+ * filepath.
+ *
+ * @param  {Function} done
+ * @public
+ */
+Storage.prototype.createVideoFilepath = function(done) {
+  var videoStorage = this.video;
+  createFilename(this.video, 'video', function(filepath) {
+    var dummyFilepath = getDir(filepath) + 'tmp.3gp';
+    var blob = new Blob([''], { type: 'video/3gpp' });
+    var req = videoStorage.addNamed(blob, dummyFilepath);
+    req.onsuccess = function(e) {
+      videoStorage.delete(e.target.result);
+      done(filepath);
+    };
+  });
 };
+
+function getDir(filepath) {
+  var index = filepath.lastIndexOf('/') + 1;
+  return index ? filepath.substring(0, index) : '';
+}
 
 Storage.prototype.onStorageChange = function(e) {
   debug('state change: %s', e.reason);

@@ -78,6 +78,7 @@ function exclude(path, options, appPath) {
   var firstDir = path.substr(appPath.length+1).split(/[\\/]/)[0];
   var isShared = firstDir === 'shared';
   var isTest = firstDir === 'test';
+  var isGit = firstDir === '.git';
   var file = utils.getFile(path);
 
   // Ignore l10n files if they have been inlined or concatenated
@@ -98,6 +99,11 @@ function exclude(path, options, appPath) {
   // Ignore files from /shared directory (these files were created by
   // Makefile code). Also ignore files in the /test directory.
   if (isShared || isTest) {
+    return true;
+  }
+
+  // Ignore everything under .git/
+  if (isGit) {
     return true;
   }
 
@@ -201,7 +207,7 @@ function copyBuildingBlock(zip, blockName, dirName, webapp) {
   let dirPath = '/shared/' + dirName + '/';
 
   // Compute the nsIFile for this shared style
-  let styleFolder = utils.getGaia(config).sharedFolder.clone();
+  let styleFolder = utils.gaia.getInstance(config).sharedFolder.clone();
   styleFolder.append(dirName);
   let cssFile = styleFolder.clone();
   if (!styleFolder.exists()) {
@@ -233,7 +239,7 @@ function copyBuildingBlock(zip, blockName, dirName, webapp) {
 
 function customizeFiles(zip, src, dest, webapp) {
   // Add customize file to the zip
-  var distDir = utils.getGaia(config).distributionDir;
+  var distDir = utils.gaia.getInstance(config).distributionDir;
   let files = utils.ls(utils.getFile(distDir, src));
   files.forEach(function(file) {
     let filename = dest + file.leafName;
@@ -247,7 +253,7 @@ function customizeFiles(zip, src, dest, webapp) {
 
 function execute(options) {
   config = options;
-  var gaia = utils.getGaia(config);
+  var gaia = utils.gaia.getInstance(config);
   var localesFile = utils.resolve(config.LOCALES_FILE,
     config.GAIA_DIR);
   if (!localesFile.exists()) {
