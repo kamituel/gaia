@@ -430,6 +430,9 @@ var KeypadManager = {
       this._holdTimer = setTimeout(function vm_call(self) {
         self._longPress = true;
         self._callVoicemail();
+
+        self._phoneNumber = self._phoneNumber.slice(0, -1);
+        self._updatePhoneNumberView('begin', false);
       }, 1500, this);
     }
 
@@ -629,8 +632,8 @@ var KeypadManager = {
     req.onsuccess = function() {
       LazyLoader.load(['/shared/js/sim_picker.js'], function() {
         LazyL10n.get(function(_) {
-          SimPicker.show(req.result[key], _('voiceMail'),
-                         self._callVoicemailForSim);
+          SimPicker.getOrPick(req.result[key], _('voiceMail'),
+                              self._callVoicemailForSim);
         });
       });
     };

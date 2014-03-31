@@ -82,6 +82,12 @@ GAIA_DEV_PIXELS_PER_PX?=1
 DOGFOOD?=0
 NODE_MODULES_SRC?=modules.tar
 
+# GAIA_DEVICE_TYPE customization
+# phone - default
+# tablet
+# tv
+GAIA_DEVICE_TYPE?=phone
+
 # Rocketbar customization
 # none - Do not enable rocketbar
 # half - Rocketbar is enabled, and so is browser app
@@ -761,10 +767,19 @@ test-integration: clean $(PROFILE_FOLDER) test-integration-test
 # Remember to remove this target after bug-969215 is finished !
 .PHONY: test-integration-test
 test-integration-test:
-	./bin/gaia-marionette RUN_CALDAV_SERVER=1 \
+	./bin/gaia-marionette \
 		--host $(MARIONETTE_RUNNER_HOST) \
 		--manifest $(TEST_MANIFEST) \
 		--reporter $(REPORTER)
+
+.PHONY: caldav-server-install
+caldav-server-install:
+	pip install virtualenv
+	virtualenv js-marionette-env; \
+  source ./js-marionette-env/bin/activate; \
+				export LC_ALL=en_US.UTF-8; \
+				export LANG=en_US.UTF-8; \
+				pip install radicale;
 
 .PHONY: test-perf
 test-perf:
@@ -911,7 +926,7 @@ gjslint:
 	# gjslint --disable 210,217,220,225 replaces --nojsdoc because it's broken in closure-linter 2.3.10
 	# http://code.google.com/p/closure-linter/issues/detail?id=64
 	@echo Running gjslint...
-	@gjslint --disable 210,217,220,225 --custom_jsdoc_tags="prop,borrows,memberof,augments,exports,global,event,example,mixes,mixin,fires,inner,todo,access,namespace,listens,module,memberOf,property" -e '$(GJSLINT_EXCLUDED_DIRS)' -x '$(GJSLINT_EXCLUDED_FILES)' $(GJSLINTED_PATH) $(LINTED_FILES)
+	@gjslint --disable 210,217,220,225 --custom_jsdoc_tags="prop,borrows,memberof,augments,exports,global,event,example,mixes,mixin,fires,inner,todo,access,namespace,listens,module,memberOf,property,requires" -e '$(GJSLINT_EXCLUDED_DIRS)' -x '$(GJSLINT_EXCLUDED_FILES)' $(GJSLINTED_PATH) $(LINTED_FILES)
 	@echo Note: gjslint only checked the files that are xfailed for jshint.
 
 JSHINT_ARGS := --reporter=build/jshint/xfail $(JSHINT_ARGS)
@@ -1046,7 +1061,7 @@ clean:
 
 # clean out build products and tools
 really-clean: clean
-	rm -rf xulrunner-* .xulrunner-* node_modules b2g modules.tar
+	rm -rf xulrunner-* .xulrunner-* node_modules b2g modules.tar js-marionette-env
 
 .git/hooks/pre-commit: tools/pre-commit
 	test -d .git && cp tools/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit || true

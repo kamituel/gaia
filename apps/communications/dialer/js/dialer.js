@@ -436,7 +436,8 @@ var NavbarManager = {
       return;
     }
     var self = this;
-    LazyLoader.load(['/shared/js/async_storage.js',
+    LazyLoader.load(['/shared/js/accessibility_helper.js',
+                     '/shared/js/async_storage.js',
                      '/shared/js/notification_helper.js',
                      '/shared/js/simple_phone_matcher.js',
                      '/shared/js/contact_photo_helper.js',
@@ -454,6 +455,7 @@ var NavbarManager = {
     var recent = document.getElementById('option-recents');
     var contacts = document.getElementById('option-contacts');
     var keypad = document.getElementById('option-keypad');
+    var tabs = [recent, contacts, keypad];
 
     recent.classList.remove('toolbar-option-selected');
     contacts.classList.remove('toolbar-option-selected');
@@ -479,6 +481,7 @@ var NavbarManager = {
         checkContactsTab();
         this.ensureResources(function() {
           recent.classList.add('toolbar-option-selected');
+          AccessibilityHelper.setAriaSelected(recent, tabs);
           CallLog.init();
         });
         break;
@@ -496,10 +499,14 @@ var NavbarManager = {
         }
 
         contacts.classList.add('toolbar-option-selected');
+        AccessibilityHelper.setAriaSelected(contacts, tabs);
         break;
       case '#keyboard-view':
         checkContactsTab();
         keypad.classList.add('toolbar-option-selected');
+        this.ensureResources(function() {
+          AccessibilityHelper.setAriaSelected(keypad, tabs);
+        });
         break;
     }
   },

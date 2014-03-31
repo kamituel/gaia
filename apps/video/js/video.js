@@ -563,13 +563,6 @@ function deleteFile(filename) {
       navigator.getDeviceStorage('pictures'). delete(postername);
   }
 
-  // In tablet landscape mode, we use currentVideo to be the current playing
-  // video and last played video. When deleting file and the file is playing or
-  // last played video, we need to change the it to the next, previous or null.
-  if (currentVideo && filename === currentVideo.name) {
-    resetCurrentVideo();
-  }
-
   // Whether or not there was a poster file to delete, delete the
   // actual video file. This will cause the MediaDB to send a 'deleted'
   // event, and the handler for that event will call videoDeleted() below.
@@ -925,8 +918,13 @@ function showPlayer(video, autoPlay, enterFullscreen, keepControls) {
     } else {
       pause();
     }
+
+    //show video player after seeking is done
+    dom.player.hidden = false;
   }
 
+  //hide video player before setVideoUrl
+  dom.player.hidden = true;
   setVideoUrl(dom.player, currentVideo, function() {
 
     if (enterFullscreen) {
@@ -1200,6 +1198,14 @@ function releaseVideo() {
 function restoreVideo() {
   // When restoreVideo is called, we assume we have currentVideo because the
   // playerShowing is true.
+
+  function doneRestoreSeeking() {
+    dom.player.onseeked = null;
+    dom.player.hidden = false;
+  }
+
+  //hide video player before setVideoUrl
+  dom.player.hidden = true;
   setVideoUrl(dom.player, currentVideo, function() {
     VideoUtils.fitContainer(dom.videoContainer, dom.player,
                             currentVideo.metadata.rotation || 0);
@@ -1215,6 +1221,12 @@ function restoreVideo() {
       // video and the restoreTime is null. At the same case, the currentTime of
       // metadata is still undefined because we haven't updateMetadata.
       dom.player.currentTime = currentVideo.metadata.currentTime || 0;
+    }
+
+    if (dom.player.seeking) {
+      dom.player.onseeked = doneRestoreSeeking;
+    } else {
+      doneRestoreSeeking();
     }
   });
 }

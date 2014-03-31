@@ -1,3 +1,12 @@
+'use strict';
+/* global MockContactsList */
+/* global MockContacts */
+/* global ContactsExporter */
+/* global MockExportStrategy */
+/* global MockMozContacts */
+/* global MockMozL10n */
+/* global MocksHelper */
+
 requireApp('communications/contacts/test/unit/mock_navigation.js');
 requireApp('communications/contacts/test/unit/mock_contacts.js');
 requireApp('communications/contacts/test/unit/mock_mozContacts.js');
@@ -41,7 +50,7 @@ suite('Contacts Exporter', function() {
 
   var subject;
   var ids = ['1', '3'];
-  var contacts;
+  var realL10n;
 
   function getContactsForIds(ids) {
     var contacts = MockContactsList();
@@ -58,7 +67,7 @@ suite('Contacts Exporter', function() {
     });
 
     return result;
-  };
+  }
 
   suiteSetup(function() {
     realL10n = navigator.mozL10n;
@@ -165,7 +174,7 @@ suite('Contacts Exporter', function() {
     });
 
     test('Status shown', function() {
-      assert.isTrue(utils.status.show.called);
+      assert.isTrue(window.utils.status.show.called);
     });
   });
 
@@ -199,7 +208,7 @@ suite('Contacts Exporter', function() {
     });
 
     test('Status shown', function() {
-      assert.isTrue(utils.status.show.called);
+      assert.isTrue(window.utils.status.show.called);
     });
   });
 
@@ -236,7 +245,7 @@ suite('Contacts Exporter', function() {
     });
 
     test('Status shown', function() {
-      assert.isTrue(utils.status.show.called);
+      assert.isTrue(window.utils.status.show.called);
     });
 
   });

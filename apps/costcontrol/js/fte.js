@@ -1,3 +1,7 @@
+/* global AutoSettings, BalanceLowLimitView, Common, ConfigManager, CostControl,
+          dataLimitConfigurer, LazyLoader,
+          debug, localizeWeekdaySelector, updateNextReset, ViewManager */
+
 /*
  * First time experience is in charge of set up the application.
  */
@@ -224,9 +228,12 @@
     newStartScreen.dataset.viewport = 'right';
     delete newStartScreen.dataset.viewport;
 
-    for (var i = 1, id; id = track[i]; i += 1) {
-      var screen = document.getElementById(id);
-      screen.dataset.viewport = 'right';
+    for (var i = 1; i < track.lenght; i += 1) {
+      var id = track[i];
+      if (id) {
+        var screen = document.getElementById(id);
+        screen.dataset.viewport = 'right';
+      }
     }
 
     // Reset state
@@ -285,7 +292,8 @@
 
   function onFinish(evt) {
     evt.target.disabled = true;
-    ConfigManager.requestSettings(function _onSettings(settings) {
+    ConfigManager.requestSettings(Common.dataSimIccId,
+                                  function _onSettings(settings) {
       ConfigManager.setOption({ fte: false }, function _returnToApp() {
         updateNextReset(settings.trackingPeriod, settings.resetTime,
           function _returnToTheApplication() {

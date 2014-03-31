@@ -1,5 +1,5 @@
 'use strict';
-/* global MocksHelper, MockApplications, MockL10n, Activities */
+/* global MocksHelper, MockApplications, MockL10n, ActionMenu, Activities */
 
 requireApp('system/test/unit/mock_applications.js');
 requireApp('system/shared/test/unit/mocks/mock_settings_listener.js');
@@ -7,7 +7,8 @@ requireApp('system/test/unit/mock_l10n.js');
 requireApp('system/js/action_menu.js');
 requireApp('system/shared/js/manifest_helper.js');
 requireApp('system/js/activities.js');
-mocha.globals(['Activities', 'addEventListener', 'dispatchEvent']);
+mocha.globals(['Activities', 'addEventListener', 'dispatchEvent',
+              'applications']);
 
 var mocksForActivities = new MocksHelper([
   'Applications'
@@ -16,11 +17,9 @@ var mocksForActivities = new MocksHelper([
 suite('system/Activities', function() {
   var realL10n;
   var subject;
-<<<<<<< HEAD
-=======
   var stubById;
   var fakeElement;
->>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
+  var realApplications;
 
   var fakeLaunchConfig1 = {
     'isActivity': false,
@@ -38,32 +37,30 @@ suite('system/Activities', function() {
   suiteSetup(function() {
     realL10n = navigator.mozL10n;
     navigator.mozL10n = MockL10n;
+    realApplications = window.applications;
+    window.applications = MockApplications;
   });
 
   suiteTeardown(function() {
     navigator.mozL10n = realL10n;
+    window.applications = realApplications;
+    realApplications = null;
   });
 
   setup(function() {
     this.sinon.useFakeTimers();
-<<<<<<< HEAD
-=======
 
     fakeElement = document.createElement('div');
     fakeElement.style.cssText = 'height: 100px; display: block;';
     stubById = this.sinon.stub(document, 'getElementById')
                           .returns(fakeElement.cloneNode(true));
 
->>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
     subject = new Activities();
   });
 
   teardown(function() {
     this.sinon.clock.restore();
-<<<<<<< HEAD
-=======
     stubById.restore();
->>>>>>> c250da9f8fdc511ad718ba594a0aa60a5959e74b
   });
 
   suite('constructor', function() {
@@ -162,6 +159,24 @@ suite('system/Activities', function() {
         }
       ]);
       assert.equal(result.length, 1);
+    });
+  });
+
+  suite('opens action menu', function() {
+    test('only opens once if we get two activity-choice events', function() {
+      var actionMenuStub = this.sinon.stub(ActionMenu.prototype, 'start');
+      var evt = {
+        type: 'mozChromeEvent',
+        detail: {
+          type: 'activity-choice',
+          choices: []
+        }
+      };
+      subject.handleEvent(evt);
+      this.sinon.clock.tick();
+      subject.handleEvent(evt);
+      this.sinon.clock.tick();
+      assert.ok(actionMenuStub.calledOnce);
     });
   });
 });

@@ -277,6 +277,8 @@ suite('system/HardwareButtons', function() {
       stubSetTimeout.getCall(0).returnValue);
   });
 
+  // Disabled bug 989974
+  /*
   test('press and hold home (screen enabled)', function() {
     var stubDispatchEvent = this.sinon.stub(window, 'dispatchEvent');
     var stubSetTimeout = this.sinon.stub(window, 'setTimeout');
@@ -303,6 +305,7 @@ suite('system/HardwareButtons', function() {
     assert.equal(stubClearTimeout.getCall(0).args[0],
       stubSetTimeout.getCall(0).returnValue);
   });
+  */
 
   test('press and hold home (screen disabled)', function() {
     var stubDispatchEvent = this.sinon.stub(window, 'dispatchEvent');

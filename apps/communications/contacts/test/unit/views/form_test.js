@@ -1,4 +1,16 @@
 'use strict';
+/* global contacts */
+/* global ConfirmDialog */
+/* global LazyLoader */
+/* global MockContactAllFields */
+/* global MockContactsSearch */
+/* global MockExtServices */
+/* global Mockfb */
+/* global MockFormDom */
+/* global MocksHelper */
+/* global MockMozContactsObj */
+/* global MockThumbnailImage */
+/* global utils */
 
 require('/shared/test/unit/mocks/mock_contact_all_fields.js');
 require('/shared/js/text_normalizer.js');
@@ -25,15 +37,11 @@ require('/shared/test/unit/mocks/mock_contact_photo_helper.js');
 
 var subject,
     realL10n,
-    dom,
-    fb,
-    realContacts,
+    Contacts,
     realFb,
     realThumbnailImage,
-    mozL10n,
     mockContact,
     footer,
-    SimplePhoneMatcher,
     ActivityHandler;
 
 var mocksForm = new MocksHelper([
@@ -41,6 +49,8 @@ var mocksForm = new MocksHelper([
   'ConfirmDialog',
   'ContactPhotoHelper'
 ]).init();
+
+mocha.globals(['fb', 'mozL10n', 'SimplePhoneMatcher']);
 
 suite('Render contact form', function() {
 
@@ -80,7 +90,7 @@ suite('Render contact form', function() {
   suiteTeardown(function() {
     window.fb = realFb;
     utils.thumbnailImage = realThumbnailImage;
-    window.mozL10n = realL10n;
+    navigator.mozL10n = realL10n;
 
     mocksForm.suiteTeardown();
 
@@ -339,6 +349,14 @@ suite('Render contact form', function() {
 
       // The add date button should be disabled
       assertAddDateState(true);
+    });
+
+    test('Birthday first day of the year is rendered properly', function() {
+      mockContact.bday = new Date(Date.UTC(2014, 0, 1));
+      subject.render(mockContact);
+
+      var element = 'add-date';
+      assertDateContent('#' + element + '-0', mockContact.bday);
     });
 
     test('Dates are saved preserving their timestasmp referred to UTC',
@@ -639,10 +657,11 @@ suite('Render contact form', function() {
     test('delete contact while in search mode', function(done) {
       deleteButton.click();
 
-      var inSearchModeStub = sinon.stub(contacts.Search,
+      sinon.stub(contacts.Search,
         'isInSearchMode', function() {
         return true;
       });
+
       var exitSearchModeStub = sinon.stub(contacts.Search,
         'exitSearchMode', function() {
         assert.isTrue(true);
@@ -668,8 +687,8 @@ suite('Render contact form', function() {
     for (var i = 0; i < fields.length; i++) {
       var currField = fields[i];
 
-      if (currField.dataset['field'] && currField.dataset['field'] != 'type') {
-        assert.isTrue(fields[i].value == '');
+      if (currField.dataset.field && currField.dataset.field != 'type') {
+        assert.isTrue(fields[i].value === '');
       }
     }
   }

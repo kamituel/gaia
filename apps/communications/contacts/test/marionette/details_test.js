@@ -94,7 +94,10 @@ marionette('Contacts > Details', function() {
     assert.equal(formContactName.getAttribute('value'), clickedContactName);
   });
 
-  test('Favorite FB contact and edit it', function() {
+  // Skiping since we need to review the middleware used in this tests.
+  // This test is related to bug 983777, leaving it until we solve those
+  // test problems.
+  test.skip('Favorite FB contact and edit it', function() {
     client.importScript(fs.readFileSync(__dirname +
                                           '/data/facebook_contact_data.js',
                                           'utf8'));
