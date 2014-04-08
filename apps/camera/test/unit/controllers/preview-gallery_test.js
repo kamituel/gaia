@@ -43,12 +43,15 @@ suite('controllers/preview-gallery', function() {
     this.app.storage.video.delete.withArgs('root/fileName').returns({});
     this.app.settings = sinon.createStubInstance(this.Settings);
 
+    this.app.activity = {};
+
     // Our test instance
     this.previewGalleryController = new this.PreviewGalleryController(this.app);
 
     // For convenience
     this.camera = this.app.camera;
     this.previewGallery = this.previewGalleryController.view;
+    this.controller = this.previewGalleryController;
     this.storage = this.app.storage;
   });
 
@@ -165,7 +168,7 @@ suite('controllers/preview-gallery', function() {
       var item = {
         blob: {},
         filepath: 'root/fileName',
-        isVideo: false
+        isVideo: true
       };
 
       this.app.activity = {
@@ -183,7 +186,7 @@ suite('controllers/preview-gallery', function() {
       var item = {
         blob: {},
         filepath: 'root/fileName',
-        isVideo: false
+        isVideo: true
       };
 
       var data = {
@@ -229,12 +232,42 @@ suite('controllers/preview-gallery', function() {
     });
 
     test('Should close the preview on blur', function() {
+      this.previewGalleryController.closePreview = sinon.spy();
+      this.previewGalleryController.onBlur();
+      assert.ok(this.previewGalleryController.closePreview.called);
+    });
+
+    test('Should close the preview on blur if in \'secureMode\'', function() {
       this.app.inSecureMode = true;
       this.previewGalleryController.closePreview = sinon.spy();
       this.previewGalleryController.configure = sinon.spy();
+      this.previewGalleryController.updateThumbnail = sinon.spy();
       this.previewGalleryController.onBlur();
-      assert.ok(this.previewGalleryController.closePreview.called);
       assert.ok(this.previewGalleryController.configure.called);
+      assert.ok(this.previewGalleryController.updateThumbnail.called);
+      assert.ok(this.previewGalleryController.closePreview.calledAfter(this.previewGalleryController.updateThumbnail));
+    });
+
+  });
+
+  suite('PreviewGalleryController#openPreview()', function() {
+    setup(function() {
+      sinon.stub(this.controller, 'previewItem');
+      this.controller.openPreview();
+    });
+
+    test('Should set `previewGalleryOpen` to `true` on app', function() {
+      assert.isTrue(this.app.set.calledWith('previewGalleryOpen', true));
+    });
+  });
+
+  suite('PreviewGalleryController#closePreview()', function() {
+    setup(function() {
+      this.controller.closePreview();
+    });
+
+    test('Should set `previewGalleryOpen` to `false` on app', function() {
+      assert.isTrue(this.app.set.calledWith('previewGalleryOpen', false));
     });
   });
 });

@@ -8,8 +8,8 @@ define(function(require, exports, module) {
 var debug = require('debug')('controller:preview-gallery');
 var bindAll = require('lib/bind-all');
 var PreviewGalleryView = require('views/preview-gallery');
-var parseJPEGMetadata = require('jpegMetaDataParser');
 var createThumbnailImage = require('lib/create-thumbnail-image');
+var preparePreview = require('lib/prepare-preview-blob');
 
 /**
  * The size of the thumbnail images we generate.
@@ -24,9 +24,7 @@ var THUMBNAIL_HEIGHT = 54 * window.devicePixelRatio;
  * Exports
  */
 
-exports = module.exports = function(app) {
-  return new PreviewGalleryController(app);
-};
+module.exports = function(app) { return new PreviewGalleryController(app); };
 module.exports.PreviewGalleryController = PreviewGalleryController;
 
 function PreviewGalleryController(app) {
@@ -40,12 +38,10 @@ function PreviewGalleryController(app) {
 }
 
 PreviewGalleryController.prototype.bindEvents = function() {
+  this.storage.on('itemdeleted', this.onItemDeleted);
   this.app.on('preview', this.openPreview);
   this.app.on('newmedia', this.onNewMedia);
   this.app.on('blur', this.onBlur);
-
-  this.storage.on('itemdeleted', this.onItemDeleted);
-
   debug('events bound');
 };
 
@@ -77,7 +73,9 @@ PreviewGalleryController.prototype.openPreview = function() {
   this.view.set('secure-mode', secureMode);
   this.view.open();
 
+  this.app.set('previewGalleryOpen', true);
   this.previewItem();
+  this.app.emit('previewgallery:opened');
 };
 
 PreviewGalleryController.prototype.closePreview = function() {
@@ -94,6 +92,8 @@ PreviewGalleryController.prototype.closePreview = function() {
     this.view.destroy();
     this.view = null;
   }
+
+  this.app.set('previewGalleryOpen', false);
   this.app.emit('previewgallery:closed');
 };
 
@@ -108,7 +108,7 @@ PreviewGalleryController.prototype.onGalleryButtonClick = function() {
   // The button shouldn't even be visible in this case, but
   // let's be really sure here.
   if (this.app.inSecureMode) { return; }
-  
+
   var MozActivity = window.MozActivity;
 
   // Launch the gallery with an activity
@@ -142,7 +142,7 @@ PreviewGalleryController.prototype.shareCurrentItem = function() {
 };
 
 /**
- * Delete the current item 
+ * Delete the current item
  * when the delete button is pressed.
  * @private
  */
@@ -194,8 +194,8 @@ PreviewGalleryController.prototype.updatePreviewGallery = function(index) {
       this.currentItemIndex = this.items.length - 1;
     }
 
-    var isPreviewOpened = this.view.isPreviewOpened();
-    if (isPreviewOpened) {
+    var isOpened = this.view ? true : false;
+    if (isOpened) {
       this.previewItem();
     }
   }
@@ -236,8 +236,24 @@ PreviewGalleryController.prototype.onNewMedia = function(item) {
     return;
   }
 
-  this.items.unshift(item);
-  this.updateThumbnail();
+  var self = this;
+
+  if (item.isVideo) {
+    // If the new media is video, use it as-is
+    addNewMedia(item);
+  } else {
+    // If it is a photo, find its EXIF preview first
+    preparePreview(item.blob, function(metadata) {
+      metadata.blob = item.blob;
+      metadata.filepath = item.filepath;
+      addNewMedia(metadata);
+    });
+  }
+
+  function addNewMedia(item) {
+    self.items.unshift(item);
+    self.updateThumbnail();
+  }
 };
 
 PreviewGalleryController.prototype.previewItem = function() {
@@ -250,8 +266,6 @@ PreviewGalleryController.prototype.previewItem = function() {
   } else {
     this.view.showImage(item);
   }
-
-  this.app.emit('previewgallery:opened');
 };
 
 /**
@@ -288,10 +302,10 @@ PreviewGalleryController.prototype.onItemDeleted = function(data) {
  */
 PreviewGalleryController.prototype.onBlur = function() {
   if (this.app.inSecureMode) {
-    this.closePreview();
     this.configure();          // Forget all stored images
     this.updateThumbnail();    // Get rid of any thumbnail
   }
+  this.closePreview();
 };
 
 PreviewGalleryController.prototype.updateThumbnail = function() {
@@ -309,16 +323,11 @@ PreviewGalleryController.prototype.updateThumbnail = function() {
                          media.rotation, media.mirrored, gotThumbnail);
   } else {
     // If it is a photo we want to use the EXIF preview rather than
-    // decoding the whole image if we can, so look for a preview first.
-    parseJPEGMetadata(media.blob, onJPEGParsed);
-  }
-
-  function onJPEGParsed(metadata) {
+    // decoding the whole image if we can.
     var blob;
-
-    if (metadata.preview) {
+    if (media.preview) {
       // If JPEG contains a preview we use it to create the thumbnail
-      blob = media.blob.slice(metadata.preview.start, metadata.preview.end,
+      blob = media.blob.slice(media.preview.start, media.preview.end,
                               'image/jpeg');
     } else {
       // Otherwise, use the full-size image
@@ -326,7 +335,8 @@ PreviewGalleryController.prototype.updateThumbnail = function() {
     }
 
     createThumbnailImage(blob, THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT,
-                         metadata.rotation, metadata.mirrored, gotThumbnail);
+                         media.rotation, media.mirrored, gotThumbnail);
+
   }
 
   function gotThumbnail(blob) {
