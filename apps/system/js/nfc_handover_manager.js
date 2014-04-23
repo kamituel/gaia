@@ -22,9 +22,9 @@ var NfcHandoverManager = {
 
   DEBUG: false,
 
-  settings: window.navigator.mozSettings,
-  bluetooth: window.navigator.mozBluetooth,
-  nfc: window.navigator.mozNfc,
+  settings: null,
+  bluetooth: null,
+  nfc: null,
 
   defaultAdapter: null,
 
@@ -90,6 +90,10 @@ var NfcHandoverManager = {
 
   init: function init() {
     var self = this;
+
+    this.settings = navigator.mozSettings;
+    this.bluetooth = navigator.mozBluetooth;
+    this.nfc = navigator.mozNfc;
 
     if (this.bluetooth.enabled) {
       this.debug('Bluetooth already enabled on boot');
