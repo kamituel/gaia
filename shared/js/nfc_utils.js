@@ -177,7 +177,7 @@ NfcUtils = {
   /**
    * Returns an Uint8Array representation of a string.
    * 
-   * @param {String} str non-null string to convert.
+   * @param {String} str String to convert.
    * @return {Uint8Array}
    */
   fromUTF8: function fromUTF8(str) {
