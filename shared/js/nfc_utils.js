@@ -181,6 +181,10 @@ NfcUtils = {
    * @return {Uint8Array}
    */
   fromUTF8: function fromUTF8(str) {
+    if (!str) {
+      return null;
+    }
+
     var buf = new Uint8Array(str.length);
     for (var i = 0; i < str.length; i++) {
       buf[i] = str.charCodeAt(i);
@@ -206,7 +210,7 @@ NfcUtils = {
   /**
    * Returns a string representation of an Uint8Array.
    * 
-   * @param {Uint8Array} a non-null Uint8Array instance.
+   * @param {Uint8Array} a Uint8Array instance.
    * @return {String}
    */
   toUTF8: function toUTF8(a) {
