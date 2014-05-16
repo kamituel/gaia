@@ -151,7 +151,7 @@
           // OrientationManager listen this event to
           // publish 'reset-orientation' event
           // even when orientation is locked
-          this.stop();
+          this.stop(true);
           break;
         case 'shrinking-receiving':
           // It should be launched, then received.
@@ -268,7 +268,7 @@
    * @this {ShrinkingUI}
    */
   ShrinkingUI.stop =
-    (function su_stop() {
+    (function su_stop(instant) {
       if (!this._state()) {
         return;
       }
@@ -280,7 +280,7 @@
       }).bind(this);
       this.current.tip.remove();
       this.current.tip = null;
-      this._shrinkingTiltBack(true, afterTiltBack);
+      this._shrinkingTiltBack(instant, afterTiltBack);
     }).bind(ShrinkingUI);
 
   /**
@@ -289,10 +289,7 @@
    * @this {ShrinkingUI}
    */
   ShrinkingUI._rejected = (function su_rejected() {
-    this._sendingSlideTo('BOTTOM' , (function() {
-      this._enableSlidingCover();
-      this._setTip();
-    }).bind(this));
+    this._sendingSlideTo('BOTTOM' , this.stop);
   }).bind(ShrinkingUI);
 
   /**
