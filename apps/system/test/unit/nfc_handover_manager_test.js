@@ -80,11 +80,18 @@ suite('Nfc Handover Manager Functions', function() {
   };
 
   suite('Activity Routing for NfcHandoverManager', function() {
-    var activityInjection1;
-    var activityInjection2;
+    var spyName;
+    var spyPairing;
+
+    var standardHandover;
+    var simplifiedHandover;
+    var nokiaHandover;
 
     setup(function() {
-      activityInjection1 = {
+      spyName = this.sinon.spy(NfcConnectSystemDialog.prototype, 'show');
+      spyPairing = this.sinon.spy(NfcHandoverManager, 'doPairing');
+
+      standardHandover = {
         type: 'techDiscovered',
         techList: ['NFC_A','NDEF'],
         records: NDEFUtils.encodeHandoverSelect(
@@ -100,7 +107,7 @@ suite('Nfc Handover Manager Functions', function() {
        * MAC address (4C:21:D0:9F:12:F1) and its name (MBH10).
        * Both parameters are checked via appropriate spies.
        */
-      activityInjection2 = {
+      simplifiedHandover = {
         type: 'techDiscovered',
         techList: ['NDEF'],
         records: [{
@@ -113,24 +120,48 @@ suite('Nfc Handover Manager Functions', function() {
         }],
         sessionToken: '{e9364a8b-538c-4c9d-84e2-e6ce524afd18}'
       };
+
+      nokiaHandover = {
+        type: 'techDiscovered',
+        techList: ['NDEF'],
+        records: [{
+          tnf: NDEF.TNF_EXTERNAL_TYPE,
+          type: NDEF.RTD_HANDOVER_NOKIA,
+          id: new Uint8Array(),
+          // todo: replace with BH-505 data
+          payload: new Uint8Array([0x10,                    // marker
+                                   0x11, 0x22, 0x33,
+                                   0x44, 0x55, 0x66,        // MAC
+                                   0x00, 0x00, 0x00,        // class of device
+                                   0x08,                    // name length
+                                   0x62, 0x62, 0x62,
+                                   0x62, 0x61, 0x61,
+                                   0x61, 0x61])             // name
+        }]
+      };
+    });
+
+    teardown(function() {
+      spyName.restore();
+      spyPairing.restore();
     });
 
     test('nfc/HandoverSelect', function() {
-      var spyName = this.sinon.spy(NfcConnectSystemDialog.prototype, 'show');
-      var spyPairing = this.sinon.spy(NfcHandoverManager, 'doPairing');
-
-      NfcManager.handleTechnologyDiscovered(activityInjection1);
+      NfcManager.handleTechnologyDiscovered(standardHandover);
       assert.isTrue(spyName.withArgs('UE MINI BOOM').calledOnce);
       assert.isTrue(spyPairing.withArgs('00:0D:44:E7:95:AB').calledOnce);
     });
 
     test('nfc/SimplifiedPairingRecord', function() {
-      var spyName = this.sinon.spy(NfcConnectSystemDialog.prototype, 'show');
-      var spyPairing = this.sinon.spy(NfcHandoverManager, 'doPairing');
-
-      NfcManager.handleTechnologyDiscovered(activityInjection2);
+      NfcManager.handleTechnologyDiscovered(simplifiedHandover);
       assert.isTrue(spyName.withArgs('MBH10').calledOnce);
       assert.isTrue(spyPairing.withArgs('4C:21:D0:9F:12:F1').calledOnce);
+    });
+
+    test('nfc/NokiaHandover', function() {
+      NfcManager.handleTechnologyDiscovered(nokiaHandover);
+      assert.isTrue(spyName.withArgs('bbbbaaaa').calledOnce);
+      assert.isTrue(spyPairing.withArgs('11:22:33:44:55:66').calledOnce);
     });
   });
 

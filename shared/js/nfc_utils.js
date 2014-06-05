@@ -38,6 +38,7 @@ const NDEF = {
   RTD_HANDOVER_CARRIER: 0,
   RTD_HANDOVER_REQUEST: 0,
   RTD_HANDOVER_SELECT: 0,
+  RTD_HANDOVER_NOKIA: 0,
 
   CPS_INACTIVE: 0,
   CPS_ACTIVE: 1,
@@ -65,6 +66,7 @@ const NDEF = {
     this.RTD_HANDOVER_CARRIER = NfcUtils.fromUTF8('Hc');
     this.RTD_HANDOVER_REQUEST = NfcUtils.fromUTF8('Hr');
     this.RTD_HANDOVER_SELECT = NfcUtils.fromUTF8('Hs');
+    this.RTD_HANDOVER_NOKIA = NfcUtils.fromUTF8('nokia.com:bt');
 
     this.MIME_BLUETOOTH_OOB =
       NfcUtils.fromUTF8('application/vnd.bluetooth.ep.oob');

@@ -25,7 +25,7 @@
  */
 var NDEFUtils = {
 
-  DEBUG: false,
+  DEBUG: true,
 
   /*****************************************************************************
    *****************************************************************************
@@ -228,6 +228,64 @@ var NDEFUtils = {
       }
     }
     return btssp;
+  },
+
+  /**
+   * TODO
+   */
+  parseNokiaHandover: function parseNokiaHandover(msg) {
+    try {
+      if (!msg || !Array.isArray(msg) || msg.length !== 1) {
+        return null;
+      }
+
+      var hRecordBuffer = NfcUtils.createBuffer(msg[0].payload);
+      var marker = hRecordBuffer.getOctet();
+
+      var mac = hRecordBuffer.getOctetArray(6);
+      // Order of bytes in MAC address is reversed when compared
+      // to standard handover records.
+      for (var m = 0; m < 3; m += 1) {
+        var temp = mac[5 - m];
+        mac[5 - m] = mac[m];
+        mac[m] = temp;
+      }
+
+      var h = {
+        mac: this.formatMAC(mac)
+      };
+
+      // Skip over class of device
+      hRecordBuffer.skip(3);
+
+      // Skip over authentication data
+      switch (marker) {
+        case 0x00:
+        case 0x01:
+        case 0x02:
+          hRecordBuffer.skip(16);
+          break;
+        case 0x10:
+          // No auth data
+          break;
+        case 0x24:
+          hRecordBuffer.skip(4);
+          break;
+        default:
+          // Invalid marker
+          return null;
+      }
+
+      var nameLength = hRecordBuffer.getOctet();
+      if (nameLength > 0) {
+        h.localName = NfcUtils.toUTF8(hRecordBuffer.getOctetArray(nameLength));
+      }
+
+      return h;
+    } catch (err) {
+      this.debug('Could not parse Nokia handover: ' + err.message);
+      return null;
+    }
   },
 
   /**

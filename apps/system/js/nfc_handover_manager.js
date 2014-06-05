@@ -21,7 +21,7 @@
  */
 var NfcHandoverManager = {
 
-  DEBUG: false,
+  DEBUG: true,
 
   settings: null,
   bluetooth: null,
@@ -333,7 +333,7 @@ var NfcHandoverManager = {
   handleHandoverSelect: function handleHandoverSelect(ndef) {
     this.debug('handleHandoverSelect');
     var btssp = this.getBluetoothSSP(ndef);
-    if (btssp == null) {
+    if (btssp === null) {
       return;
     }
     if (this.sendFileRequest != null) {
@@ -343,6 +343,15 @@ var NfcHandoverManager = {
       // This is a static handover
       this.onRequestConnect(btssp);
     }
+  },
+
+  handleNokiaHandover: function handleNokiaHandover(ndef, session) {
+    this.debug('handleNokiaHandover');
+    var btssp = NDEFUtils.parseNokiaHandover(ndef);
+    if (btssp === null) {
+      return;
+    }
+    this.onRequestConnect(btssp);
   },
 
   handleHandoverRequest: function handleHandoverRequest(ndef, session) {

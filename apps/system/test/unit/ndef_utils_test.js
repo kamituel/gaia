@@ -398,6 +398,94 @@ suite('NDEFUtils tests', function() {
     });
   });
 
+  suite('parseNokiaHandover() tests', function() {
+    var mac;
+    var name;
+
+    var encodeNokiaHandover = function(marker, mac, name) {
+      var auth;
+      switch (marker) {
+        case 0x00:
+        case 0x01:
+        case 0x02:
+          auth = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+          break;
+        case 0x10:
+          auth = [];
+          break;
+        case 0x24:
+          auth = [0x00, 0x00, 0x00, 0x00];
+          break;
+      }
+
+      var payload = [marker]
+                    .concat(NDEFUtils.parseMAC(mac).reverse())
+                    .concat([0x00, 0x00, 0x00])  // class of device
+                    .concat(auth)
+                    .concat(name.length)
+                    .concat(Array.apply([], NfcUtils.fromUTF8(name)));
+      return [{
+        tnf: NDEF.TNF_EXTERNAL_TYPE,
+        type: NDEF.RTD_HANDOVER_NOKIA,
+        id: new Uint8Array(),
+        payload: new Uint8Array(payload)
+      }];
+    };
+
+    setup(function() {
+      mac = '12:34:56:78:9A:BC';
+      name = 'proprietary protocols rulez';
+    });
+
+    test('Returns null if no input given', function() {
+      var hout = NDEFUtils.parseNokiaHandover(null);
+      assert.isNull(hout);
+    });
+
+    test('Returns null if input is not an array', function() {
+      var hout = NDEFUtils.parseNokiaHandover(5);
+      assert.isNull(hout);
+    });
+
+    test('Returns null if input array contains 0 or more than 1 record',
+      function() {
+
+      var hout = NDEFUtils.parseNokiaHandover([]);
+      assert.isNull(hout);
+
+      hout = NDEFUtils.parseNokiaHandover([{}, {}]);
+      assert.isNull(hout);
+    });
+
+    test('Returns null if marker is invalid', function() {
+      var hin = encodeNokiaHandover(0x00, mac, name);
+      hin[0].payload[0] = 0x03;
+      var hout = NDEFUtils.parseNokiaHandover(hin);
+      assert.isNull(hout);
+    });
+
+    test('Decodes MAC and Bluetooth name for various markers', function() {
+      var markers = [0x00, 0x01, 0x02, 0x10, 0x24];
+      for (var m = 0; m < markers.length; m += 1) {
+        var hin = encodeNokiaHandover(markers[m], mac, name);
+        var hout = NDEFUtils.parseNokiaHandover(hin);
+
+        assert.isNotNull(hout);
+        assert.equal(hout.localName, name);
+        assert.equal(hout.mac, mac);
+      }
+    });
+
+    test('Returns null if record is corrupted (too short)', function() {
+      var hin = encodeNokiaHandover(0x00, mac, name);
+      var payload = hin[0].payload;
+      hin[0].payload = payload.subarray(0, payload.length - 1);
+      var hout = NDEFUtils.parseNokiaHandover(hin);
+      assert.isNull(hout);
+    });
+  });
+
   suite('encodeHandoverRequest() tests', function() {
     var cps;
     var btMac;

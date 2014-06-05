@@ -21,7 +21,7 @@
 'use strict';
 
 var NfcManager = {
-  DEBUG: false,
+  DEBUG: true,
 
   NFC_HW_STATE_OFF: 0,
   NFC_HW_STATE_ON: 1,
@@ -46,7 +46,7 @@ var NfcManager = {
       if (optObject) {
         output += JSON.stringify(optObject);
       }
-      dump(output);
+      dump(output + '\n');
     }
   },
 
@@ -352,22 +352,28 @@ var NfcManager = {
        * are handled by the handover manager.
        */
       var firstRecord = msg.records[0];
-      if ((firstRecord.tnf == NDEF.TNF_MIME_MEDIA) &&
+      if ((firstRecord.tnf === NDEF.TNF_MIME_MEDIA) &&
           NfcUtils.equalArrays(firstRecord.type, NDEF.MIME_BLUETOOTH_OOB)) {
         this._debug('Handle simplified pairing record');
         NfcHandoverManager.handleSimplifiedPairingRecord(msg.records);
         return;
       }
-      if ((firstRecord.tnf == NDEF.TNF_WELL_KNOWN) &&
+      if ((firstRecord.tnf === NDEF.TNF_WELL_KNOWN) &&
           NfcUtils.equalArrays(firstRecord.type, NDEF.RTD_HANDOVER_SELECT)) {
         this._debug('Handle Handover Select');
         NfcHandoverManager.handleHandoverSelect(msg.records);
         return;
       }
-      if ((firstRecord.tnf == NDEF.TNF_WELL_KNOWN) &&
+      if ((firstRecord.tnf === NDEF.TNF_WELL_KNOWN) &&
           NfcUtils.equalArrays(firstRecord.type, NDEF.RTD_HANDOVER_REQUEST)) {
         this._debug('Handle Handover Request');
         NfcHandoverManager.handleHandoverRequest(msg.records, msg.sessionToken);
+        return;
+      }
+      if ((firstRecord.tnf === NDEF.TNF_EXTERNAL_TYPE) &&
+          NfcUtils.equalArrays(firstRecord.type, NDEF.RTD_HANDOVER_NOKIA)) {
+        this._debug('Handle Nokia handover');
+        NfcHandoverManager.handleNokiaHandover(msg.records, msg.sessionToken);
         return;
       }
     }
