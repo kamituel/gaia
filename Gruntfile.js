@@ -39,7 +39,8 @@ module.exports = function(grunt) {
         console.log('... ' + filePath + ' config file found');
         var appcfg = JSON.parse(fs.readFileSync(jsonFile,
           { encoding: 'utf8' }));
-        extend(jsdocConfig, appcfg);
+        if(filePath.indexOf('system') !== -1)
+          extend(jsdocConfig, appcfg);
       }
     }
   });

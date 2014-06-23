@@ -117,7 +117,7 @@ suite('Nfc Handover Manager Functions', function() {
 
     test('nfc/HandoverSelect', function() {
       var spyName = this.sinon.spy(NfcConnectSystemDialog.prototype, 'show');
-      var spyPairing = this.sinon.spy(NfcHandoverManager, 'doPairing');
+      var spyPairing = this.sinon.spy(NfcHandoverManager, '_doPairing');
 
       NfcManager.handleTechnologyDiscovered(activityInjection1);
       assert.isTrue(spyName.withArgs('UE MINI BOOM').calledOnce);
@@ -126,7 +126,7 @@ suite('Nfc Handover Manager Functions', function() {
 
     test('nfc/SimplifiedPairingRecord', function() {
       var spyName = this.sinon.spy(NfcConnectSystemDialog.prototype, 'show');
-      var spyPairing = this.sinon.spy(NfcHandoverManager, 'doPairing');
+      var spyPairing = this.sinon.spy(NfcHandoverManager, '_doPairing');
 
       NfcManager.handleTechnologyDiscovered(activityInjection2);
       assert.isTrue(spyName.withArgs('MBH10').calledOnce);
@@ -144,16 +144,17 @@ suite('Nfc Handover Manager Functions', function() {
     setup(function() {
       cps = NDEF.CPS_ACTIVE;
       mac = '01:23:45:67:89:AB';
-      spyPairing = this.sinon.spy(NfcHandoverManager, 'doPairing');
+      spyPairing = this.sinon.spy(NfcHandoverManager, '_doPairing');
       spySendNDEF = this.sinon.spy(MockMozNfc.MockNFCPeer, 'sendNDEF');
 
-      NfcHandoverManager.init();
+      NfcHandoverManager.start();
       invokeBluetoothGetDefaultAdapter();
     });
 
     teardown(function() {
       spyPairing.restore();
       spySendNDEF.restore();
+      NfcHandoverManager.stop();
     });
 
     test('handleHandoverRequest(): sends Hs message to peer', function() {
@@ -204,7 +205,7 @@ suite('Nfc Handover Manager Functions', function() {
         requestId: 'request-01'
       };
 
-      NfcHandoverManager.init();
+      NfcHandoverManager.start();
       invokeBluetoothGetDefaultAdapter();
     });
 
@@ -283,7 +284,7 @@ suite('Nfc Handover Manager Functions', function() {
   suite('Action queuing when Bluetooth disabled', function() {
     setup(function() {
       MockBluetooth.enabled = false;
-      NfcHandoverManager.init();
+      NfcHandoverManager.start();
     });
 
     teardown(function() {
@@ -295,7 +296,7 @@ suite('Nfc Handover Manager Functions', function() {
       assert.equal(0, NfcHandoverManager.actionQueue.length);
 
       var action = {};
-      NfcHandoverManager.doAction(action);
+      NfcHandoverManager._doAction(action);
 
       assert.equal(1, NfcHandoverManager.actionQueue.length);
     });
@@ -306,7 +307,7 @@ suite('Nfc Handover Manager Functions', function() {
         args: ['lorem', 100]
       };
 
-      NfcHandoverManager.doAction(action);
+      NfcHandoverManager._doAction(action);
 
       window.dispatchEvent(new CustomEvent('bluetooth-adapter-added'));
       invokeBluetoothGetDefaultAdapter();
