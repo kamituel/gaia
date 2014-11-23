@@ -1,15 +1,25 @@
 window.addEventListener('DOMContentLoaded', function() {
   'use strict';
 
-  var button = document.querySelector('button'),
+  var seButton = document.querySelector('#se'),
+      exitButton = document.querySelector('#exit'),
       resultDiv = document.querySelector('#result');
 
-  button.onclick = () => {
+  seButton.onclick = () => {
+    resultDiv.textContent = '';
+    var startTime = new Date().getTime();
+
     window.navigator.mozFake.openLogicalChannel()
       .then(() => {
-        resultDiv.textContent = 'Channel opened, access granted.';
+        var endTime = new Date().getTime();
+        resultDiv.textContent = 'Channel opened, access granted. Took ' +
+                                (endTime - startTime) + ' ms';
       }, (err) => {
         resultDiv.textContent = 'Channel not opened. Error: ' + JSON.stringify(err);
       });
+  };
+
+  exitButton.onclick = () => {
+    window.close();
   };
 });
